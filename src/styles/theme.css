@@ -1,0 +1,175 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222.2, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222.2, 84%, 4.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222.2, 84%, 4.9%);
+  --primary: hsl(222.2, 47.4%, 11.2%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96.1%);
+  --secondary-foreground: hsl(222.2, 47.4%, 11.2%);
+  --muted: hsl(210, 40%, 96.1%);
+  --muted-foreground: hsl(215.4, 16.3%, 46.9%);
+  --accent: hsl(210, 40%, 96.1%);
+  --accent-foreground: hsl(222.2, 47.4%, 11.2%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(214.3, 31.8%, 91.4%);
+  --input: hsl(214.3, 31.8%, 91.4%);
+  --ring: hsl(222.2, 84%, 4.9%);
+  --radius: 0.5rem;
+  --sidebar-background: hsl(0, 0%, 98%);
+  --sidebar-foreground: hsl(240, 5.3%, 26.1%);
+  --sidebar-primary: hsl(240, 5.9%, 10%);
+  --sidebar-primary-foreground: hsl(0, 0%, 98%);
+  --sidebar-accent: hsl(240, 4.8%, 95.9%);
+  --sidebar-accent-foreground: hsl(240, 5.9%, 10%);
+  --sidebar-border: hsl(220, 13%, 91%);
+  --sidebar-ring: hsl(217.2, 91.2%, 59.8%);
+  
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+}
+
+.dark {
+  --background: hsl(222.2, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222.2, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222.2, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(210, 40%, 98%);
+  --primary-foreground: hsl(222.2, 47.4%, 11.2%);
+  --secondary: hsl(217.2, 32.6%, 17.5%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217.2, 32.6%, 17.5%);
+  --muted-foreground: hsl(215, 20.2%, 65.1%);
+  --accent: hsl(217.2, 32.6%, 17.5%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217.2, 32.6%, 17.5%);
+  --input: hsl(217.2, 32.6%, 17.5%);
+  --ring: hsl(212.7, 26.8%, 83.9%);
+  --sidebar-background: hsl(240, 5.9%, 10%);
+  --sidebar-foreground: hsl(240, 4.8%, 95.9%);
+  --sidebar-primary: hsl(224.3, 76.3%, 48%);
+  --sidebar-primary-foreground: hsl(0, 0%, 100%);
+  --sidebar-accent: hsl(240, 3.7%, 15.9%);
+  --sidebar-accent-foreground: hsl(240, 4.8%, 95.9%);
+  --sidebar-border: hsl(240, 3.7%, 15.9%);
+  --sidebar-ring: hsl(217.2, 91.2%, 59.8%);
+}
+
+@theme inline {
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Navy Brand from monSite */
+  --color-navy: #0E1729;
+  --color-navy-light: #151F32;
+  --color-navy-active: #262027;
+
+  /* Site Orange Brand from monSite */
+  --color-site-orange: #F97215;
+  --color-site-orange-border: #F98631;
+  --color-site-orange-light: #FEF7EE;
+  --color-site-orange-text: #D99171;
+  --color-site-orange-muted: #F9D5B7;
+  --color-site-orange-dark: #E86B11;
+
+  /* Slate Brand from monSite */
+  --color-slate-50: #F8F9FB;
+  --color-slate-100: #F0F4F8;
+  --color-slate-150: #EDF1F5;
+  --color-slate-200: #E7ECF2;
+  --color-slate-300: #D4DBE1;
+  --color-slate-400: #BAC3CB;
+  --color-slate-500: #8B98A1;
+  --color-slate-600: #677781;
+  --color-slate-700: #58616A;
+  --color-slate-800: #3B4450;
+  --color-slate-900: #1E2730;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  /* Typography / Fonts from monSite */
+  --font-sans: "Inter", -apple-system, Roboto, Helvetica, sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* ── Hide scrollbars globally (keep scroll functional) ── */
+  * {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE / Edge legacy */
+  }
+  *::-webkit-scrollbar {
+    display: none;               /* Chrome / Safari / Opera */
+  }
+}

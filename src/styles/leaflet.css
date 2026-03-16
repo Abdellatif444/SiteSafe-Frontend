@@ -1,0 +1,15 @@
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+/* Custom Leaflet styles for HSE dashboard */
+.leaflet-container {
+  font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}
+
+.leaflet-popup-content {
+  margin: 8px 12px;
+}
