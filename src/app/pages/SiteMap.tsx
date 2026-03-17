@@ -1,3 +1,5 @@
+import React from "react";
+import { useLocation } from "react-router";
 import {
   MapContainer,
   TileLayer,
@@ -10,7 +12,7 @@ import {
   CircleMarker
 } from "react-leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Video, X, Layers, Save, Check, Undo2, LocateFixed, AlertCircle, MapPin, HardHat, Shirt, ShieldCheck, Ban, Link2, Truck, Shield, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Video, X, Layers, Save, Check, Undo2, LocateFixed, AlertCircle, MapPin, HardHat, Shirt, ShieldCheck, Ban, Link2, Truck, Shield, ChevronDown, RotateCcw, Settings, Eye } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { mockCameras } from '../data/mockData';
@@ -118,6 +120,9 @@ export function SiteMap() {
   const [cameraPositions, setCameraPositions] = useState<Record<number, [number, number]>>(
     () => Object.fromEntries(mockCameras.map(c => [c.id, c.coords]))
   );
+  const [cameraOrientations, setCameraOrientations] = useState<Record<number, number>>(
+    () => Object.fromEntries(mockCameras.map(c => [c.id, 45]))
+  );
   const [draggingCamId, setDraggingCamId] = useState<number | null>(null);
   // Zone qualification modal
   const [pendingShape, setPendingShape] = useState<PendingShape | null>(null);
@@ -133,6 +138,14 @@ export function SiteMap() {
 
   const featureGroupRef = useRef<L.FeatureGroup>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const location = useLocation();
+  const incomingZone = (location.state as { zone?: string } | null)?.zone;
+
+  const zoomToMarker = useCallback((latlng: [number, number]) => {
+    if (mapRef.current) {
+      mapRef.current.flyTo(latlng, 17, { duration: 0.8 });
+    }
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current || !drawMode || drawMode === "camera") return;
@@ -405,7 +418,17 @@ export function SiteMap() {
   };
 
   return (
-    <div className="h-full flex relative">
+    <div className="h-full flex flex-col relative">
+      {/* Contextual banner when coming from CameraMonitoring */}
+      {incomingZone && (
+        <div className="bg-[#F97215]/10 border-b border-[#F97215]/30 px-5 py-2.5 flex items-center gap-3 shrink-0">
+          <MapPin size={15} className="text-[#F97215] shrink-0" />
+          <span className="text-sm text-[#E86B11] font-semibold">
+            Navigation depuis <strong>Surveillance Caméras</strong> — Localisation cible : <strong>{incomingZone}</strong>. Utilisez la liste des couches pour naviguer vers cette zone.
+          </span>
+        </div>
+      )}
+      <div className="flex-1 flex relative">
       {/* Zone Qualification Modal (create + edit) */}
       {modalOpen && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -690,53 +713,140 @@ export function SiteMap() {
 
         {/* Drawn Layers List */}
         {(cameras.length > 0 || shapes.length > 0) && (
-          <div className="bg-[#24303F] border border-[#2A3648] rounded-xl p-4 flex flex-col min-h-[180px] max-h-[260px]">
-            <h3 className="text-white text-sm mb-3 flex items-center justify-between font-medium shrink-0">
-              <span className="flex items-center gap-2"><Layers size={18} strokeWidth={2.5} /> Couches et Éléments</span>
-              <span className="text-slate-500 text-xs font-normal">{shapes.length + cameras.length} élément{(shapes.length + cameras.length) > 1 ? 's' : ''}</span>
-            </h3>
-            <div className="space-y-1.5 overflow-y-auto pr-1 flex-1">
+          <div className="bg-[#1E2A38] border border-[#2A3648] rounded-xl overflow-hidden flex flex-col max-h-[260px]">
+            {/* Header - visuellement distinct des boutons d'outils */}
+            <div className="px-4 py-3 flex items-center justify-between border-b border-[#2A3648] shrink-0">
+              <span className="flex items-center gap-2 text-slate-300 text-xs font-semibold uppercase tracking-widest">
+                <Layers size={14} strokeWidth={2.5} className="text-slate-400" /> Couches et Éléments
+              </span>
+              <span className="bg-slate-700/60 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {shapes.length + cameras.length + mockCameras.length}
+              </span>
+            </div>
+
+            {/* Items list - style épuré sans fond lourd */}
+            <div className="overflow-y-auto flex-1">
               {shapes.map((shape) => {
                 const zt = ZONE_TYPES.find(z => z.value === shape.zoneType);
+                const isCovered = !!shape.linkedCameraId;
                 return (
                   <div
                     key={shape.id}
                     onClick={() => zoomToShape(shape)}
-                    onDoubleClick={(e) => { e.stopPropagation(); openEditModal(shape); }}
-                    className="bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 flex items-center justify-between group cursor-pointer hover:bg-slate-700/80 hover:border-slate-500/60 transition-colors"
-                    title="Clic : centrer la carte | Double-clic : modifier la zone"
+                    className="group flex items-center justify-between px-4 py-2.5 border-b border-slate-700/40 cursor-pointer hover:bg-slate-700/30 transition-colors"
+                    title="Clic : centrer la carte sur cette zone"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: zt?.color ?? '#E84E1B' }}></span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow" style={{ backgroundColor: zt?.color ?? '#E84E1B' }}></span>
                       <div className="min-w-0">
-                        <div className="text-slate-200 text-xs font-semibold truncate">{shape.name}</div>
-                        {zt && <div className="text-slate-500 text-[10px]">{zt.label}{shape.linkedCameraId ? ` • 📷 CAM-0${shape.linkedCameraId}` : ''}</div>}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-200 text-xs font-semibold truncate">{shape.name}</span>
+                          {!isCovered && (
+                            <span title="Zone non couverte par une caméra" className="text-[9px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/30 px-1.5 py-0.5 rounded-full shrink-0">
+                              ⚠ Non couverte
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-slate-500 text-[10px] truncate">
+                          {zt?.label}{isCovered ? ` · CAM-0${shape.linkedCameraId}` : ''}
+                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRemoveShape(shape.id); }}
-                      className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {/* Hover actions */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEditModal(shape); }}
+                        title="Modifier la zone"
+                        className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-site-orange hover:bg-orange-500/10 transition-colors"
+                      >
+                        <Pencil size={12} strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRemoveShape(shape.id); }}
+                        title="Supprimer la zone"
+                        className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={12} strokeWidth={2.5} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
+              {/* Caméras système mockées — avec curseur d'orientation */}
+              {mockCameras.map((cam) => {
+                const pos = cameraPositions[cam.id] ?? cam.coords;
+                return (
+                  <div
+                    key={`sys-cam-${cam.id}`}
+                    onClick={() => zoomToMarker(pos)}
+                    className="group flex flex-col px-4 py-2.5 border-b border-slate-700/40 hover:bg-slate-700/20 transition-colors cursor-pointer"
+                    title="Clic : centrer la carte sur cette caméra"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Video size={13} className={`shrink-0 ${cam.status === 'active' ? 'text-blue-400' : 'text-amber-400'}`} />
+                        <div>
+                          <div className="text-slate-200 text-xs font-semibold">{cam.name}</div>
+                          <div className="text-slate-500 text-[10px]">{cam.location}</div>
+                        </div>
+                      </div>
+                      <span
+                        title={cam.status === 'active' ? 'Caméra opérationnelle' : 'En maintenance depuis le 12/03/2026. Couverture caméra inactive.'}
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                          cam.status === 'active'
+                            ? 'text-emerald-400 bg-emerald-400/10 border border-emerald-400/30'
+                            : 'text-amber-400 bg-amber-400/10 border border-amber-400/30'
+                        }`}
+                      >
+                        {cam.status === 'active' ? '● Actif' : '⚙ Maint.'}
+                      </span>
+                    </div>
+                    {/* Orientation slider — visible on hover */}
+                    <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2">
+                        <RotateCcw size={10} className="text-slate-500 shrink-0" />
+                        <input
+                          type="range" min={0} max={359} step={5}
+                          value={cameraOrientations[cam.id] ?? 45}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setCameraOrientations(prev => ({ ...prev, [cam.id]: Number(e.target.value) }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 h-1 accent-blue-400 cursor-pointer"
+                          title={`Orientation: ${cameraOrientations[cam.id] ?? 45}°`}
+                        />
+                        <span className="text-[10px] text-blue-400 font-mono w-8 text-right shrink-0">{cameraOrientations[cam.id] ?? 45}°</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Caméras manuellement placées */}
               {cameras.map((camera) => (
-                <div key={camera.id} className="bg-slate-700/50 border border-slate-600/50 rounded-lg px-3 py-2 flex items-center justify-between group">
-                  <div className="flex items-center gap-2">
+                <div
+                  key={camera.id}
+                  className="group flex items-center justify-between px-4 py-2.5 border-b border-slate-700/40 hover:bg-slate-700/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <Video size={13} className="text-blue-400 shrink-0" />
                     <div className="text-slate-200 text-xs font-semibold truncate max-w-[140px]">{camera.name}</div>
                   </div>
-                  <button onClick={() => handleRemoveCamera(camera.id)} className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Trash2 size={13} />
-                  </button>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0">
+                    <button
+                      onClick={() => handleRemoveCamera(camera.id)}
+                      title="Supprimer la caméra"
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      <Trash2 size={12} strokeWidth={2.5} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
             {/* Color legend */}
-            <div className="mt-3 pt-3 border-t border-slate-700/60 shrink-0">
-              <p className="text-slate-600 text-[9px] uppercase tracking-wide mb-1.5 font-medium">Légende</p>
+            <div className="px-4 py-2.5 border-t border-[#2A3648] shrink-0">
               <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                 {ZONE_TYPES.map(zt => (
                   <div key={zt.value} className="flex items-center gap-1.5">
@@ -848,7 +958,14 @@ export function SiteMap() {
                   <div className="font-bold">{shape.name}</div>
                   {shape.zoneType && <div className="text-slate-300 text-[10px]">{ZONE_TYPES.find(z => z.value === shape.zoneType)?.label}</div>}
                   {shape.hseRule && <div className="text-amber-300 text-[10px] mt-0.5">⚠ {shape.hseRule}</div>}
-                  {shape.linkedCameraId && <div className="text-blue-300 text-[10px]">📷 {mockCameras.find(c => c.id === shape.linkedCameraId)?.name}</div>}
+                  {shape.linkedCameraId && (() => {
+                    const cam = mockCameras.find(c => c.id === shape.linkedCameraId);
+                    return cam ? (
+                      <div className={`text-[10px] mt-1.5 ${cam.status === 'active' ? 'text-blue-300' : 'text-amber-400 font-bold'}`}>
+                        {cam.status === 'active' ? `📹 ${cam.name} (Active)` : `⚠ ${cam.name} (Maintenance - Zone Aveugle)`}
+                      </div>
+                    ) : null;
+                  })()}
                 </Tooltip>
               </Polygon>
             );
@@ -858,37 +975,109 @@ export function SiteMap() {
           })}
 
           {/* System Cameras (from mockData) — draggable to reposition */}
-          {mockCameras.map((cam) => (
-            <Marker
-              key={`sys-${cam.id}`}
-              position={cameraPositions[cam.id] ?? cam.coords}
-              icon={buildCameraIcon(draggingCamId === cam.id ? 'maintenance' : cam.status)}
-              draggable={true}
-              eventHandlers={{
-                dragstart: () => setDraggingCamId(cam.id),
-                dragend: (e) => {
-                  const { lat, lng } = (e.target as L.Marker).getLatLng();
-                  setCameraPositions(prev => ({ ...prev, [cam.id]: [lat, lng] }));
-                  setDraggingCamId(null);
-                },
-              }}
-            >
-              <Tooltip direction="top" offset={[0, -20]} opacity={1}
-                className="!bg-[#1a2235] !border-blue-500 !text-white !text-xs !rounded-lg !shadow-xl !px-3 !py-2">
-                <div className="font-bold">{cam.name}</div>
-                <div className="text-slate-300 text-[11px]">{cam.location}</div>
-                <div className={`mt-1 text-[10px] font-semibold ${cam.status === 'active' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                  {cam.status === 'active' ? '● ACTIF' : '⚙ MAINTENANCE'}
-                </div>
-                <div className="text-slate-400 text-[10px] mt-0.5 italic">Glisser pour repositionner</div>
-              </Tooltip>
-            </Marker>
-          ))}
+          {mockCameras.map((cam) => {
+            const pos = cameraPositions[cam.id] ?? cam.coords;
+            const angle = cameraOrientations[cam.id] ?? 45;
+            const isActive = cam.status === 'active';
+            const coneColor = isActive ? '#3b82f6' : '#f59e0b';
+            // Add pulse animation wrapper for maintenance cameras
+            const coneClass = !isActive ? "animate-pulse" : "";
+            const coneSvg = `<div class="${coneClass}" style="transform:rotate(${angle}deg);transform-origin:center;width:100px;height:100px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+                <path d="M50 50 L100 20 A60 60 0 0 1 100 80 Z"
+                  fill="${coneColor}" fill-opacity="0.22"
+                  stroke="${coneColor}" stroke-width="1.2" stroke-opacity="0.65"/>
+              </svg>
+            </div>`;
+            return (
+              <React.Fragment key={cam.id}>
+                {/* Cone of vision — interactive for tooltip */}
+                <Marker
+                  position={pos}
+                  icon={L.divIcon({ html: coneSvg, iconSize: [100, 100], iconAnchor: [50, 50], className: '' })}
+                  zIndexOffset={-100}
+                >
+                  <Tooltip direction="right" offset={[30, 0]} opacity={1}
+                    className="!bg-[#0f172a] !border-blue-500/60 !text-white !text-xs !rounded-lg !shadow-2xl !px-3 !py-2">
+                    <div className="font-bold text-blue-300">{cam.name}</div>
+                    <div className="text-slate-300 text-[11px]">{cam.location}</div>
+                    <div className="text-slate-400 text-[10px] mt-1">FOV: 90° · Orientation: {angle}°</div>
+                    <div className={`mt-1 text-[10px] font-semibold ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {isActive ? '● ACTIF' : '⚙ MAINTENANCE'}
+                    </div>
+                  </Tooltip>
+                </Marker>
+                {/* Camera marker */}
+                <Marker
+                  position={pos}
+                  icon={buildCameraIcon(draggingCamId === cam.id ? 'maintenance' : cam.status)}
+                  draggable={true}
+                  eventHandlers={{
+                    dragstart: () => setDraggingCamId(cam.id),
+                    dragend: (e) => {
+                      const { lat, lng } = (e.target as L.Marker).getLatLng();
+                      setCameraPositions(prev => ({ ...prev, [cam.id]: [lat, lng] }));
+                      setDraggingCamId(null);
+                    },
+                  }}
+                >
+                  <Tooltip direction="top" offset={[0, -20]} opacity={1}
+                    className="!bg-[#1a2235] !border-blue-500 !text-white !text-xs !rounded-lg !shadow-xl !px-3 !py-2 !pointer-events-auto"
+                    interactive={true}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="font-bold">{cam.name}</div>
+                      <button className="text-slate-400 hover:text-white transition-colors cursor-pointer" title="Paramètres Caméra (Simulé)">
+                        <Settings size={14} />
+                      </button>
+                    </div>
+                    <div className="text-slate-300 text-[11px] mb-1">{cam.location}</div>
+                    
+                    <div className="flex items-center justify-between border-t border-slate-700/50 pt-1.5 mt-1">
+                      <div className={`text-[10px] font-semibold ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {isActive ? '● ACTIF' : '⚙ MAINTENANCE'}
+                      </div>
+                      <div className="text-slate-400 text-[10px]">
+                        <Eye size={10} className="inline mr-1 mb-0.5"/>
+                        FOV: 90° · {angle}°
+                      </div>
+                    </div>
+                    <div className="text-slate-500 text-[9px] mt-1 italic">Glisser pour repositionner le marqueur</div>
+                  </Tooltip>
+                </Marker>
+              </React.Fragment>
+            );
+          })}
 
           {/* Manually placed cameras (user added) */}
-          {cameras.map((camera) => (
-            <Marker key={camera.id} position={camera.position} icon={buildCameraIcon('active')} />
-          ))}
+          {cameras.map((camera) => {
+            const manualConeSvg = `<div style="transform:rotate(0deg);transform-origin:center;width:80px;height:80px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+                <path d="M40 40 L80 16 A48 48 0 0 1 80 64 Z"
+                  fill="#94a3b8" fill-opacity="0.15"
+                  stroke="#94a3b8" stroke-width="1" stroke-opacity="0.5"/>
+              </svg>
+            </div>`;
+            return (
+              <React.Fragment key={camera.id}>
+                {/* Static gray cone for manual cameras */}
+                <Marker
+                  position={camera.position}
+                  icon={L.divIcon({ html: manualConeSvg, iconSize: [80, 80], iconAnchor: [40, 40], className: '' })}
+                  interactive={false}
+                  zIndexOffset={-110}
+                />
+                <Marker position={camera.position} icon={buildCameraIcon('active')}>
+                  <Tooltip direction="top" offset={[0, -20]} opacity={1}
+                    className="!bg-[#1a2235] !text-white !text-xs !rounded-lg !shadow-xl !px-3 !py-2"
+                  >
+                    <div className="font-bold">{camera.name}</div>
+                    <div className="text-slate-400 text-[10px] mt-0.5">Caméra manuelle (Statique)</div>
+                  </Tooltip>
+                </Marker>
+              </React.Fragment>
+            );
+          })}
         </MapContainer>
 
         {drawMode === "camera" && (
@@ -897,6 +1086,7 @@ export function SiteMap() {
             Cliquer sur la carte pour placer la caméra
           </div>
         )}
+      </div>
       </div>
     </div>
   );

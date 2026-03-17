@@ -201,8 +201,13 @@ export function Layout() {
               <div className="absolute top-1 right-1 w-[9px] h-[9px] bg-site-orange rounded-full border-[1.5px] border-white translate-x-[2px] -translate-y-[2px]"></div>
             </button>
 
-            <button className="hidden sm:block px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[14px] font-medium hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-colors">
-              Générer rapport
+            <button 
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[14px] font-medium hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-colors"
+              title="Créer et configurer un rapport d'inspection formel (avec plage de dates, zones, type)"
+              onClick={() => alert("Ouverture du formulaire de création d'un rapport d'inspection complet. (Simulation)")}
+            >
+              <FileText size={15} />
+              Créer Rapport d&apos;Inspection
             </button>
 
             <button 

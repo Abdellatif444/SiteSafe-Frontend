@@ -1,4 +1,5 @@
 // src/app/data/mockData.ts
+// Last updated: 2026-03-17
 
 // ─── 1. Cameras & Zones ────────────────────────────────────────────────────────
 export type CameraStatus = 'active' | 'maintenance';
@@ -11,7 +12,7 @@ export interface Camera {
   status: CameraStatus;
   fps: number;
   image: string;
-  coords: [number, number]; // [lat, lng]
+  coords: [number, number]; // [lat, lng] — Casablanca area
   detections: { workers: number; helmets: number; vests: number; vehicles: number };
 }
 
@@ -54,6 +55,12 @@ export const mockCameras: Camera[] = [
   },
 ];
 
+// Helper: get coords from camera name (used in RealTimeAlerts)
+export function getCameraCoords(cameraName: string): { lat: number; lng: number } {
+  const cam = mockCameras.find(c => c.name === cameraName);
+  return cam ? { lat: cam.coords[0], lng: cam.coords[1] } : { lat: 33.5760, lng: -7.5900 };
+}
+
 // ─── 2. Alerts ─────────────────────────────────────────────────────────────
 export type AlertSeverity = 'critical' | 'high' | 'medium' | 'low';
 export type AlertStatus = 'active' | 'in-progress' | 'resolved';
@@ -65,8 +72,8 @@ export interface AlertData {
   zone: string;
   severity: AlertSeverity;
   status: AlertStatus;
-  time: string;
-  date: string;
+  time: string;         // HH:MM:SS AM/PM
+  date: string;         // YYYY-MM-DD
   description: string;
   image: string;
   isNew: boolean;
@@ -74,33 +81,56 @@ export interface AlertData {
 }
 
 export const mockAlerts: AlertData[] = [
-  { 
-    id: 1, type: 'Gilet de Sécurité Manquant', camera: 'CAM-01', zone: mockCameras[0].location, 
-    severity: 'high', status: 'active', time: '10:23:45 AM', date: '2026-03-09',
+  {
+    id: 1, type: 'Gilet de Sécurité Manquant', camera: 'CAM-01', zone: mockCameras[0].location,
+    severity: 'high', status: 'active', time: '10:23:45 AM', date: '2026-03-17',
     description: 'Ouvrier détecté sans gilet de sécurité dans une zone EPI obligatoire',
     image: mockCameras[0].image,
-    isNew: true
+    isNew: true,
   },
-  { 
-    id: 2, type: 'Distance Dangereuse avec les Engins', camera: 'CAM-03', zone: mockCameras[2].location, 
-    severity: 'critical', status: 'in-progress', time: '10:15:32 AM', date: '2026-03-09',
+  {
+    id: 2, type: 'Distance Dangereuse avec les Engins', camera: 'CAM-03', zone: mockCameras[2].location,
+    severity: 'critical', status: 'in-progress', time: '10:15:32 AM', date: '2026-03-17',
     description: "Ouvrier à moins de 3 mètres d'une pelleteuse active",
     image: mockCameras[2].image,
-    isNew: false, assignedTo: 'Alex Johnson'
+    isNew: false, assignedTo: 'Alex Johnson',
   },
-  { 
-    id: 3, type: 'Casque de Sécurité Manquant', camera: 'CAM-04', zone: mockCameras[3].location, 
-    severity: 'critical', status: 'active', time: '09:47:18 AM', date: '2026-03-09',
-    description: 'Ouvrier détecté sans casque de sécurité dans la zone d\'opération',
+  {
+    id: 3, type: 'Casque de Sécurité Manquant', camera: 'CAM-04', zone: mockCameras[3].location,
+    severity: 'critical', status: 'active', time: '09:47:18 AM', date: '2026-03-17',
+    description: "Ouvrier détecté sans casque de sécurité dans la zone d'opération",
     image: mockCameras[3].image,
-    isNew: true
+    isNew: true,
   },
-  { 
-    id: 4, type: 'Comportement Risqué en Zone de Levage', camera: 'CAM-06', zone: mockCameras[5].location, 
-    severity: 'medium', status: 'active', time: '08:55:12 AM', date: '2026-03-09',
+  {
+    id: 4, type: 'Comportement Risqué en Zone de Levage', camera: 'CAM-06', zone: mockCameras[5].location,
+    severity: 'medium', status: 'active', time: '08:55:12 AM', date: '2026-03-17',
     description: 'Mouvement rapide identifié sous une charge suspendue (Grue)',
     image: mockCameras[5].image,
-    isNew: false
+    isNew: false,
+  },
+  // ── Alertes résolues (historique) ──
+  {
+    id: 5, type: 'Casque de Sécurité Manquant', camera: 'CAM-01', zone: mockCameras[0].location,
+    severity: 'high', status: 'resolved', time: '08:15:00 AM', date: '2026-03-17',
+    description: "Ouvrier sans casque détecté à l'entrée nord — situation résolue après intervention",
+    image: mockCameras[0].image,
+    isNew: false, assignedTo: 'Chef de Chantier Sarah',
+  },
+  {
+    id: 6, type: 'Zone Interdite Franchie', camera: 'CAM-04', zone: mockCameras[3].location,
+    severity: 'critical', status: 'resolved', time: '15:42:00 PM', date: '2026-03-16',
+    description: "Intrusion détectée dans la zone de sécurité restreinte du périmètre sud",
+    image: mockCameras[3].image,
+    isNew: false, assignedTo: 'Responsable Sécurité John',
+  },
+  // ── Violation de zone ACTIVE (pour démonstration du panneau CRITIQUE) ──
+  {
+    id: 7, type: 'Zone Interdite Franchie', camera: 'CAM-01', zone: mockCameras[0].location,
+    severity: 'critical', status: 'active', time: '10:22:05 AM', date: '2026-03-17',
+    description: "Intrusion active détectée à l'entrée nord — zone de sécurité opérateurs uniquement",
+    image: mockCameras[0].image,
+    isNew: true,
   },
 ];
 
@@ -120,28 +150,28 @@ export interface Incident {
 export const mockIncidents: Incident[] = [
   {
     id: 'INC-001', title: 'Casque de Sécurité Manquant en Zone D', violationType: 'Violation EPI',
-    priority: 'critical', status: 'in-progress', createdDate: '2026-03-09 09:47:18', updatedDate: '2026-03-09 10:35:12',
+    priority: 'critical', status: 'in-progress', createdDate: '2026-03-17 09:47:18', updatedDate: '2026-03-17 10:35:12',
     location: mockCameras[3].location, assignedTo: 'Responsable Sécurité John',
     company: 'BuildCorp', companyInitials: 'BU', companyColor: 'bg-blue-500',
-    reporter: 'Système de Détection IA (CAM-04)', deadline: 'Oct 24, 2026',
+    reporter: 'Système de Détection IA (CAM-04)', deadline: '2026-03-19',
     description: 'Ouvrier détecté sans casque de sécurité obligatoire dans une zone exigeant des EPI. Action immédiate requise.',
     images: [mockCameras[3].image],
   },
   {
     id: 'INC-002', title: 'Distance Dangereuse par Rapport aux Engins Lourds', violationType: 'Violation de Distance',
-    priority: 'critical', status: 'open', createdDate: '2026-03-09 10:15:32', updatedDate: '2026-03-09 10:15:32',
+    priority: 'critical', status: 'open', createdDate: '2026-03-17 10:15:32', updatedDate: '2026-03-17 10:15:32',
     location: mockCameras[2].location, assignedTo: null,
     company: 'ConstructCo', companyInitials: 'CO', companyColor: 'bg-indigo-500',
-    reporter: 'Système de Détection IA (CAM-03)', deadline: 'Oct 25, 2026',
+    reporter: 'Système de Détection IA (CAM-03)', deadline: '2026-03-18',
     description: "Ouvrier à moins de 3 mètres d'une pelleteuse en activité. La distance de sécurité minimale est de 5 mètres selon la réglementation HSE.",
     images: [mockCameras[2].image],
   },
   {
     id: 'INC-003', title: 'Gilet de Sécurité Manquant dans la Zone de Travail', violationType: 'Violation EPI',
-    priority: 'high', status: 'resolved', createdDate: '2026-03-09 10:23:45', updatedDate: '2026-03-09 10:50:20',
+    priority: 'high', status: 'resolved', createdDate: '2026-03-17 10:23:45', updatedDate: '2026-03-17 10:50:20',
     location: mockCameras[0].location, assignedTo: 'Chef de Chantier Sarah',
     company: 'SafetyFirst Ltd', companyInitials: 'SA', companyColor: 'bg-emerald-500',
-    reporter: 'Système de Détection IA (CAM-01)', deadline: 'Oct 22, 2026',
+    reporter: 'Système de Détection IA (CAM-01)', deadline: '2026-03-17',
     description: "Ouvrier sans gilet à haute visibilité dans une zone active. Problème résolu, l'ouvrier a été équipé de l'EPI approprié.",
     images: [mockCameras[0].image],
   },
@@ -167,18 +197,24 @@ export interface Mission {
 export const mockDroneMissions: Mission[] = [
   {
     id: 1, name: 'Inspection de Sécurité Matinale', zone: mockCameras[0].location,
-    date: '2026-03-09', time: '08:00 AM', status: 'completed', duration: '45 min', drone: 'DRONE-01',
-    images: 247, anomalies: 1, flightPath: 'Balayage du périmètre avec focus sur l\'entrée nord',
+    date: '2026-03-17', time: '08:00 AM', status: 'completed', duration: '45 min', drone: 'DRONE-01',
+    images: 247, anomalies: 1, flightPath: "Balayage du périmètre avec focus sur l'entrée nord",
   },
   {
-    id: 2, name: 'Vérification Périmètre Suspendue', zone: mockCameras[4].location,
-    date: '2026-03-09', time: '10:30 AM', status: 'cancelled', duration: '30 min', drone: 'DRONE-02',
-    images: 0, anomalies: 0, flightPath: 'Zone en maintenance, inspection annulée',
+    id: 2, name: 'Vérification Périmètre Zone A Ouest', zone: mockCameras[4].location,
+    // Mission planifiée pour couvrir CAM-05 (en maintenance) — logique métier cohérente
+    date: '2026-03-17', time: '10:30 AM', status: 'cancelled', duration: '30 min', drone: 'DRONE-02',
+    images: 0, anomalies: 0, flightPath: 'Zone partiellement couverte malgré caméra en maintenance — inspection annulée',
   },
   {
     id: 3, name: 'Analyse des Mouvements de Véhicules', zone: mockCameras[2].location,
-    date: '2026-03-09', time: '02:00 PM', status: 'scheduled', duration: '60 min', drone: 'DRONE-01',
+    date: '2026-03-17', time: '14:00 PM', status: 'scheduled', duration: '60 min', drone: 'DRONE-01',
     images: 0, anomalies: 0, flightPath: 'Trajet linéaire le long des voies de circulation des véhicules',
+  },
+  {
+    id: 4, name: 'Suivi Avancement Chantier — Périmètre Complet', zone: 'Toutes Zones',
+    date: '2026-03-18', time: '07:30 AM', status: 'scheduled', duration: '90 min', drone: 'DRONE-01',
+    images: 0, anomalies: 0, flightPath: 'Couverture complète du chantier pour évaluation avancement',
   },
 ];
 
@@ -186,5 +222,9 @@ export const mockDroneAnomalies = [
   {
     id: 1, type: 'Ouvrier Trop Près de la Machine', location: mockCameras[2].location, timestamp: '10:42 AM', severity: 'Élevé',
     image: mockCameras[2].image,
+  },
+  {
+    id: 2, type: 'Zone Non Conforme au Planning', location: mockCameras[0].location, timestamp: '08:28 AM', severity: 'Moyen',
+    image: mockCameras[0].image,
   },
 ];

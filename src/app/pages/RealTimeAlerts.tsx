@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import {
   AlertTriangle, Clock, Video, MapPin, User, CheckCircle,
-  Filter, Activity, ShieldAlert, ShieldCheck, Eye, FileText
+  Filter, Activity, ShieldAlert, ShieldCheck, Eye, FileText, ArrowLeft, X
 } from 'lucide-react';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
-import { mockAlerts, AlertSeverity, AlertStatus } from '../data/mockData';
+import { mockAlerts, AlertSeverity, AlertStatus, getCameraCoords } from '../data/mockData';
 
 export interface Alert {
   id: number;
@@ -28,7 +28,7 @@ const initialAlerts: Alert[] = mockAlerts.map(a => ({
   ...a,
   timestamp: `${a.date} ${a.time}`,
   snapshot: a.image,
-  location: { lat: 48.8570, lng: 2.3510 },
+  location: getCameraCoords(a.camera),   // Casablanca coords from matching camera
   assignedTo: a.assignedTo || null,
 }));
 
@@ -51,67 +51,132 @@ const STAT: Record<AlertStatus, { label: string; bg: string; icon: React.ReactNo
 
 export function RealTimeAlerts() {
   const location = useLocation();
+  const navigate = useNavigate();
   const passedAlertId = location.state?.selectedAlertId as number | undefined;
+  // Camera context: passed when coming from CameraMonitoring "Voir tout"
+  const passedCamera = location.state?.camera as string | undefined;
+  // Use 'zoneName' alias to avoid collision with the 'location' variable from useLocation
+  const passedCameraLocation = (location.state as { location?: string } | null)?.location;
 
-  const [alerts, setAlerts] = useState(initialAlerts);
-  const [selectedId, setSelectedId] = useState<number>(passedAlertId || initialAlerts[0].id);
+  // Séparer les alertes d'origine (fixes) et les alertes générées en temps réel
+  const [baseAlerts, setBaseAlerts] = useState(initialAlerts);
+  const [simulatedAlerts, setSimulatedAlerts] = useState<Alert[]>([]);
+  // La liste des alertes est toujours la fusion des nouvelles simluées + la base historique
+  const alerts = [...simulatedAlerts, ...baseAlerts];
+  // If a camera was passed, pre-select its first alert
+  const firstCamAlert = passedCamera ? initialAlerts.find(a => a.camera === passedCamera) : undefined;
+  const [selectedId, setSelectedId] = useState<number>(passedAlertId || firstCamAlert?.id || initialAlerts[0].id);
   const [detailOpen, setDetailOpen] = useState(true);
+  // Camera filter: if arrived from a specific camera, pre-filter
+  const [cameraFilter, setCameraFilter] = useState<string | null>(passedCamera || null);
   
-  // Si l'utilisateur clique sur une autre alerte depuis le dashboard alors que la page est déjà montée
+  const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<AlertStatus | 'all'>('all');
+
+  // Si l'utilisateur clique sur une autre alerte depuis le dashboard
   useEffect(() => {
     if (passedAlertId && alerts.some(a => a.id === passedAlertId)) {
       setSelectedId(passedAlertId);
       setDetailOpen(true);
     }
   }, [passedAlertId, alerts]);
-  
-  const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<AlertStatus | 'all'>('all');
 
-  // Simulation d'alertes en temps réel
+
+  // Simulation d'alertes temps réel — génère des détections sur des zones réelles du chantier
   useEffect(() => {
+    const realZones = [
+      { camera: 'CAM-01', zone: 'Zone A - Entrée Nord' },
+      { camera: 'CAM-03', zone: "Zone C - Zone d'Équipement" },
+      { camera: 'CAM-04', zone: 'Zone D - Périmètre Sud' },
+      { camera: 'CAM-06', zone: 'Zone B - Porte Est' },
+    ];
+    const realTypes = [
+      'Accès Non Autorisé Détecté',
+      'Casque de Sécurité Manquant',
+      'Gilet de Sécurité Manquant',
+      'Comportement Dangereux Détecté',
+    ];
     const timer = setInterval(() => {
-      setAlerts(prev => {
-        const newAlert: Alert = {
-          id: Date.now(),
-          type: 'Accès Non Autorisé Détecté',
-          severity: 'high',
-          status: 'active',
-          timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          camera: 'CAM-01',
-          zone: 'Zone Nouvelle',
-          location: { lat: 48.8570 + (Math.random() - 0.5) * 0.005, lng: 2.3510 + (Math.random() - 0.5) * 0.005 },
-          snapshot: 'https://images.unsplash.com/photo-1723367194881-fe2e53534170?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080',
-          description: 'Mouvement suspect détecté dans une zone non autorisée',
-          assignedTo: null,
-        };
-        // On garde max 10 alertes pour éviter un dom trop grand
-        return [newAlert, ...prev].slice(0, 10);
-      });
-    }, 15000); // 15 secondes pour la démo
-
+      const pick = realZones[Math.floor(Math.random() * realZones.length)];
+      const type = realTypes[Math.floor(Math.random() * realTypes.length)];
+      const coords = getCameraCoords(pick.camera);
+      const newId = Date.now();
+      setNewAlertIds(prev => { const next = new Set(prev); next.add(newId); setTimeout(() => setNewAlertIds(s => { const n2 = new Set(s); n2.delete(newId); return n2; }), 30000); return next; });
+      const newAlert: Alert = {
+        id: newId,
+        type,
+        severity: 'high',
+        status: 'active',
+        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        camera: pick.camera,
+        zone: pick.zone,
+        location: { lat: coords.lat + (Math.random() - 0.5) * 0.002, lng: coords.lng + (Math.random() - 0.5) * 0.002 },
+        snapshot: 'https://images.unsplash.com/photo-1723367194881-fe2e53534170?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1080',
+        description: `Détection automatisée par IA sur ${pick.camera} — ${pick.zone}`,
+        assignedTo: null,
+      };
+      setSimulatedAlerts(prev => [newAlert, ...prev].slice(0, 15)); // On garde max 15 générées
+    }, 30000); // 30 sec pour laisser le temps de comprendre
     return () => clearInterval(timer);
   }, []);
 
   const filteredAlerts = alerts.filter(a => 
+    (cameraFilter === null || a.camera === cameraFilter) &&
     (filterSeverity === 'all' || a.severity === filterSeverity) &&
     (filterStatus === 'all' || a.status === filterStatus)
   );
 
+  // When a camera filter is active, KPIs reflect that camera only — coherent with the filtered list
+  const kpiBase = cameraFilter
+    ? alerts.filter(a => a.camera === cameraFilter)
+    : alerts;
+  const statActive   = kpiBase.filter(a => a.status === 'active').length;
+  const statAck      = kpiBase.filter(a => a.status === 'in-progress').length;
+  const statRes      = kpiBase.filter(a => a.status === 'resolved').length;
+  const statCritical = kpiBase.filter(a => a.severity === 'critical' && a.status === 'active').length;
+
   const selectedAlert = alerts.find(a => a.id === selectedId) || alerts[0];
 
-  const statActive = alerts.filter(a => a.status === 'active').length;
-  const statAck = alerts.filter(a => a.status === 'in-progress').length;
-  const statRes = alerts.filter(a => a.status === 'resolved').length;
-  const statCritical = alerts.filter(a => a.severity === 'critical' && a.status === 'active').length;
+  // Track which alert IDs arrived via real-time simulation (so we can badge them 'NOUVEAU')
+  const [newAlertIds, setNewAlertIds] = useState<Set<number>>(new Set());
 
-  // Mock actions
+  // Mock actions (applies to either base or simulated alert)
   const changeStatus = (id: number, newStatus: AlertStatus) => {
-    setAlerts(alerts.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    setBaseAlerts(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
+    setSimulatedAlerts(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
   };
 
   return (
     <div className="bg-[#F4F7FC] font-sans min-h-full">
+
+      {/* ── Camera Context Banner (shown when arriving from CameraMonitoring) ── */}
+      {cameraFilter && (
+        <div className="bg-orange-50 border-b border-orange-200 px-8 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/cameras', { state: { camera: cameraFilter } })}
+              className="flex items-center gap-1.5 text-orange-600 hover:text-orange-800 font-bold text-sm transition-colors"
+            >
+              <ArrowLeft size={15} /> Retour à {cameraFilter}
+            </button>
+            <span className="text-gray-300">|</span>
+            <div className="flex items-center gap-1.5 text-gray-600 text-sm">
+              <MapPin size={13} className="text-orange-400" />
+              <span className="font-semibold">{passedCameraLocation}</span>
+            </div>
+            <span className="bg-orange-100 border border-orange-300 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
+              Filtré : alertes de {cameraFilter}
+            </span>
+          </div>
+          <button
+            onClick={() => setCameraFilter(null)}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 font-semibold transition-colors"
+          >
+            <X size={13} /> Voir toutes les alertes
+          </button>
+        </div>
+      )}
+
       {/* ── Top Bar ── */}
       <div className="bg-white border-b border-gray-200 px-8 py-5 shadow-sm sticky top-0 z-10 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
@@ -185,6 +250,12 @@ export function RealTimeAlerts() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className={`font-bold text-sm leading-tight truncate ${isSelected ? 'text-gray-900' : 'text-gray-800'}`}>{alert.type}</h3>
                           {alert.status === 'active' && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"/>}
+                          {/* NOUVEAU badge — only shown for real-time simulated alerts (30s window) */}
+                          {newAlertIds.has(alert.id) && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500 text-white animate-pulse tracking-wider" title="Nouvelle détection IA en temps réel">
+                              NOUVEAU
+                            </span>
+                          )}
                         </div>
                         <div className="text-gray-400 text-xs truncate max-w-sm">{alert.description}</div>
                       </div>
