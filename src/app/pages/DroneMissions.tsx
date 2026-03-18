@@ -2,13 +2,13 @@ import { useState } from 'react';
 import {
   Plane, Calendar, MapPin, Clock, Play, Pause,
   CheckCircle, AlertTriangle, Plus, X, List, Image as ImageIcon,
-  Route, FileText, Video,
+  Route, FileText, Video, Edit2, RotateCw, BatteryLow
 } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
-import { mockDroneMissions as initialMissions, mockDroneAnomalies as detectedAnomalies, Mission, MissionStatus } from '../data/mockData';
+import { mockDroneMissions as initialMissions, mockDroneAnomalies as detectedAnomalies, Mission } from '../data/mockData';
 
 // ─── Style Config ─────────────────────────────────────────────────────────────
 
@@ -156,9 +156,26 @@ export function DroneMissions() {
                             <p className="text-gray-500 text-sm">{selected.zone}</p>
                           </div>
                         </div>
-                        <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm">
-                          <FileText size={15}/> Rapport de Mission
-                        </button>
+                        {selected.status === 'completed' && (
+                          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Vérifier le document certifié de fin d'inspection">
+                            <FileText size={15}/> Rapport de Mission
+                          </button>
+                        )}
+                        {selected.status === 'scheduled' && (
+                          <div className="hidden sm:flex items-center gap-2">
+                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Modifier la planification de la mission">
+                              <Edit2 size={15}/> Modifier
+                            </button>
+                            <button className="flex items-center gap-2 px-4 py-2 bg-[#F97215] text-white hover:bg-[#ea660c] border border-transparent rounded-xl text-sm font-bold transition shadow-md shadow-orange-100" title="Forcer le décollage immédiat du drone">
+                              <Play size={15}/> Démarrer
+                            </button>
+                          </div>
+                        )}
+                        {selected.status === 'cancelled' && (
+                          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Reprogrammer cette mission">
+                            <RotateCw size={15}/> Relancer Mission
+                          </button>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -182,6 +199,44 @@ export function DroneMissions() {
                           <p className="text-gray-700 text-sm font-medium">{selected.flightPath}</p>
                         </div>
                       )}
+
+                      {/* ── Battery Telemetry (only for in-progress missions) ── */}
+                      {selected.status === 'in-progress' && (() => {
+                        // Simulated live battery: deterministic based on mission id for demo stability
+                        const battery = Math.max(8, 78 - (selected.id * 17) % 65);
+                        const isLow = battery < 25;
+                        const isCritical = battery < 15;
+                        const barColor = isCritical ? 'bg-red-500' : isLow ? 'bg-amber-500' : 'bg-emerald-500';
+                        return (
+                          <div className={`mt-4 pt-4 border-t ${isCritical ? 'border-red-200 bg-red-50 -mx-5 px-5 pb-3 rounded-b-xl' : 'border-gray-100'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className={`text-[10px] font-bold uppercase tracking-wide flex items-center gap-1.5 ${isCritical ? 'text-red-600' : 'text-gray-400'}`}>
+                                <BatteryLow size={13} className={isCritical ? 'animate-pulse' : ''}/> Télémétrie Batterie (Live)
+                              </div>
+                              <span className={`text-sm font-extrabold ${isCritical ? 'text-red-600 animate-pulse' : isLow ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                {battery}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                              <div 
+                                className={`${barColor} h-full rounded-full transition-all duration-500`}
+                                style={{ width: `${battery}%` }}
+                              />
+                            </div>
+                            {isCritical && (
+                              <div className="mt-2 flex items-center gap-2 text-red-700 text-xs font-bold">
+                                <AlertTriangle size={13} className="shrink-0 animate-pulse"/>
+                                Batterie critique ! Retour à la base immédiat recommandé.
+                              </div>
+                            )}
+                            {isLow && !isCritical && (
+                              <div className="mt-2 text-amber-600 text-xs font-semibold">
+                                Batterie faible — Prévoir le retour dans moins de 5 min.
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Detected Anomalies */}
@@ -192,7 +247,7 @@ export function DroneMissions() {
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {detectedAnomalies.slice(0, selected.anomalies).map((anomaly) => (
-                            <div key={anomaly.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group">
+                            <div key={anomaly.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
                               <div className="aspect-video relative bg-gray-100 overflow-hidden">
                                 <ImageWithFallback src={anomaly.image} alt={anomaly.type} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                                 <div className="absolute top-2 right-2">
@@ -201,12 +256,15 @@ export function DroneMissions() {
                                   </span>
                                 </div>
                               </div>
-                              <div className="p-4 bg-gray-50">
-                                <div className="font-bold text-gray-800 text-sm mb-2">{anomaly.type}</div>
-                                <div className="space-y-1.5">
+                              <div className="p-4 bg-gray-50 flex-1 flex flex-col">
+                                <div className="font-bold text-gray-800 text-sm mb-2 leading-tight">{anomaly.type}</div>
+                                <div className="space-y-1.5 mb-3">
                                   <div className="flex items-center gap-2 text-xs text-gray-500 font-medium"><MapPin size={13} className="text-gray-400"/> {anomaly.location}</div>
                                   <div className="flex items-center gap-2 text-xs text-gray-500 font-medium"><Clock size={13} className="text-gray-400"/> {anomaly.timestamp}</div>
                                 </div>
+                                <button className="mt-auto w-full pt-2 pb-2 text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm group/btn" title="Valider l'anomalie IA et générer un ticket d'incident formel">
+                                  <AlertTriangle size={13} className="group-hover/btn:scale-110 transition-transform"/> Valider et Créer Incident
+                                </button>
                               </div>
                             </div>
                           ))}

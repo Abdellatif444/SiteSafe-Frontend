@@ -61,6 +61,8 @@ interface DrawnShape {
   color?: string;
   hseRule?: string;
   linkedCameraId?: number;
+  entreprise?: string;
+  lot?: string;
 }
 
 const ZONE_TYPES = [
@@ -134,6 +136,8 @@ export function SiteMap() {
   const [hseDropdownOpen, setHseDropdownOpen] = useState(false);
   const [linkedCamera, setLinkedCamera] = useState('');
   const [camDropdownOpen, setCamDropdownOpen] = useState(false);
+  const [zoneEntreprise, setZoneEntreprise] = useState('');
+  const [zoneLot, setZoneLot] = useState('');
   const modalOpen = pendingShape !== null || editingShapeId !== null;
 
   const featureGroupRef = useRef<L.FeatureGroup>(null);
@@ -363,6 +367,8 @@ export function SiteMap() {
         color: chosen.color,
         hseRule: hseRule || undefined,
         linkedCameraId: camId,
+        entreprise: zoneEntreprise.trim() || undefined,
+        lot: zoneLot.trim() || undefined,
       }]);
       setPendingShape(null);
     }
@@ -379,6 +385,8 @@ export function SiteMap() {
     setZoneType(shape.zoneType ?? ZONE_TYPES[0].value);
     setHseRule(shape.hseRule ?? '');
     setLinkedCamera(shape.linkedCameraId ? String(shape.linkedCameraId) : '');
+    setZoneEntreprise(shape.entreprise ?? '');
+    setZoneLot(shape.lot ?? '');
     setZoneNameError(false);
   };
 
@@ -389,6 +397,8 @@ export function SiteMap() {
     setZoneNameError(false);
     setHseDropdownOpen(false);
     setCamDropdownOpen(false);
+    setZoneEntreprise('');
+    setZoneLot('');
   };
 
   // Navigate to zone bounds on layer list click
@@ -627,6 +637,37 @@ export function SiteMap() {
                 {linkedCamera && mockCameras.find(c => c.id === parseInt(linkedCamera))?.status === 'maintenance' && (
                   <p className="text-amber-500 font-medium text-xs mt-2 flex items-center gap-1.5">⚠ Cette caméra est en maintenance — couverture partielle</p>
                 )}
+              </div>
+
+              {/* ── Entreprise Intervenante (Phase 1 — project-context.md) ── */}
+              <div>
+                <label className="block text-[#F97215] text-[10px] mb-1.5 font-bold uppercase tracking-widest">Entreprise intervenante</label>
+                <input
+                  value={zoneEntreprise}
+                  onChange={e => setZoneEntreprise(e.target.value)}
+                  className="w-full bg-white border border-slate-200 hover:border-slate-300 text-slate-800 rounded-xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-site-orange/10 focus:border-site-orange transition-all placeholder:text-slate-400 shadow-sm"
+                  placeholder="Ex: BâtiPro SARL, Technoélec..."
+                />
+                <p className="text-slate-400 text-[11px] mt-1.5">Entreprise responsable des travaux dans cette zone</p>
+              </div>
+
+              {/* ── Lot Technique (Phase 3 — project-context.md) ── */}
+              <div>
+                <label className="block text-[#F97215] text-[10px] mb-1.5 font-bold uppercase tracking-widest">Lot technique</label>
+                <select
+                  value={zoneLot}
+                  onChange={e => setZoneLot(e.target.value)}
+                  className="w-full bg-white border border-slate-200 hover:border-slate-300 text-slate-700 rounded-xl px-4 py-3.5 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-site-orange/10 focus:border-site-orange transition-all shadow-sm cursor-pointer"
+                >
+                  <option value="">Aucun lot associé</option>
+                  <option value="Lot 01 - Terrassement">Lot 01 - Terrassement</option>
+                  <option value="Lot 02 - Gros œuvre">Lot 02 - Gros œuvre</option>
+                  <option value="Lot 03 - Charpente Métallique">Lot 03 - Charpente Métallique</option>
+                  <option value="Lot 04 - Electricité">Lot 04 - Electricité</option>
+                  <option value="Lot 05 - Plomberie">Lot 05 - Plomberie</option>
+                  <option value="Lot 06 - Contrôle Accès">Lot 06 - Contrôle Accès</option>
+                  <option value="Lot 07 - VRD">Lot 07 - VRD (Voiries et Réseaux)</option>
+                </select>
               </div>
 
               <div className="flex gap-4 pt-5 mt-3 border-t border-slate-100">

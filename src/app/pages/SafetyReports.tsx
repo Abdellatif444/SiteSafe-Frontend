@@ -57,8 +57,12 @@ export function SafetyReports() {
             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm">
               <Calendar size={16} /> 7 Derniers Jours
             </button>
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#F97215] text-white rounded-xl text-sm font-bold hover:bg-[#ea660c] transition shadow-md shadow-orange-200">
-              <Download size={16} /> Exporter le Rapport
+            <button 
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#F97215] text-white rounded-xl text-sm font-bold hover:bg-[#ea660c] transition shadow-md shadow-orange-200"
+              onClick={() => alert("Génération du registre HSE officiel (Format PDF/Excel) conforme à l'inspection du travail en cours de téléchargement...")}
+              title="Télécharger le registre officiel pour la commission HSE"
+            >
+              <Download size={16} /> Exporter Registre (PDF)
             </button>
           </div>
         </div>
@@ -121,15 +125,29 @@ export function SafetyReports() {
             <h3 className="text-gray-800 font-bold text-lg mb-6">Violations par Type</h3>
             <div className="h-[300px] flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                   <Pie
                     data={violationsByType}
                     cx="50%"
                     cy="50%"
-                    labelLine={false}
-                    label={({ type, percent }) => `${type}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={100}
-                    innerRadius={60}
+                    labelLine={true}
+                    label={({ cx, cy, midAngle, outerRadius, index }) => {
+                      const RADIAN = Math.PI / 180;
+                      const radius = outerRadius * 1.2;
+                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                      const entry = violationsByType[index];
+                      // Calculate percentage manually since Recharts default label percent might be an object in some versions
+                      const total = violationsByType.reduce((sum, item) => sum + item.count, 0);
+                      const percent = (entry.count / total * 100).toFixed(0);
+                      return (
+                        <text x={x} y={y} fill={entry.color} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12} fontWeight="bold">
+                          {`${entry.type}: ${percent}%`}
+                        </text>
+                      );
+                    }}
+                    outerRadius={80}
+                    innerRadius={50}
                     dataKey="count"
                     stroke="#ffffff"
                     strokeWidth={2}

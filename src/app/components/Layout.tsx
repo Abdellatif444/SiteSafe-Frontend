@@ -14,7 +14,8 @@ import {
   X,
   Search,
   Bell,
-  Plus
+  Plus,
+  CloudOff
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth, Role, MOCK_USERS } from '../context/AuthContext';
@@ -193,6 +194,15 @@ export function Layout() {
               />
             </div>
             
+            {/* Offline Sync Indicator */}
+            <div 
+              className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors rounded-full text-xs font-semibold cursor-help" 
+              title="Mode hors-ligne actif (réseau instable). 3 modifications en attente de synchronisation vers le serveur distant."
+            >
+              <CloudOff size={14} />
+              <span className="hidden xl:inline">Hors-ligne (Sync en attente)</span>
+            </div>
+
             <button 
               aria-label="Notifications"
               className="relative text-slate-400 hover:text-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none p-1 rounded-md group"

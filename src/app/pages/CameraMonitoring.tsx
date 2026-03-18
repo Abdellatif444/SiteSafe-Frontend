@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Video, Maximize, AlertTriangle,
   MapPin, CheckCircle, FileText, User, Circle, Activity, Truck, BarChart2, RefreshCw, XCircle, Edit2,
-  Camera, Play, Pause, AlertOctagon, Clock, WifiOff, ExternalLink
+  Camera, Play, Pause, AlertOctagon, Clock, WifiOff, ExternalLink, Info
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -99,6 +99,12 @@ export function CameraMonitoring() {
   // Frame captured toast
   const [frameCaptured, setFrameCaptured] = useState(false);
 
+  // IA Overlays toggle
+  const [showOverlays, setShowOverlays] = useState(true);
+
+  // Manual compliance certification state
+  const [certifiedComplianceTime, setCertifiedComplianceTime] = useState<Date | null>(null);
+
   // Maintenance mock data (Image 3 improvements)
   const maintenanceSince = '2h 15min';
   const maintenanceDetails = {
@@ -169,6 +175,9 @@ export function CameraMonitoring() {
   const [cameraFilter, setCameraFilter] = useState<'all' | 'alert' | 'ok' | 'maintenance'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const maintenanceCount = cameraList.filter(c => c.status === 'maintenance').length;
+  const okCount = activeCount - alertCount;
+
   const filteredCameraList = cameraList.filter(cam => {
     if (cameraFilter === 'all') return true;
     if (cameraFilter === 'maintenance') return cam.status === 'maintenance';
@@ -198,6 +207,7 @@ export function CameraMonitoring() {
     setSelectedCamera(cam);
     setLastCheckTime(new Date());
     setComplianceStartTime(new Date());
+    setCertifiedComplianceTime(null);
   };
 
   const handleRefresh = () => {
@@ -221,87 +231,87 @@ export function CameraMonitoring() {
   return (
     <div className="bg-[#F4F7FC] font-sans min-h-full">
 
-      {/* ── Consolidated Sticky Header ── */}
-      <div className="sticky top-0 z-40 flex flex-col w-full shadow-sm">
-        {/* ── Sticky Violation Bar ── */}
+      {/* ── Consolidated Header ── */}
+      <div className="relative z-30 flex flex-col w-full shadow-sm">
+        {/* ── Violation Bar ── */}
         {hasViolation && (
           <div className="bg-red-600 text-white px-6 py-2.5 flex items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-center gap-3 min-w-0">
-            <AlertTriangle size={16} className="shrink-0 animate-pulse" />
-            <span className="text-sm font-bold truncate">⚠ Violation EPI en direct — {selectedCamera.name} ({selectedCamera.location})</span>
-            <span className={`shrink-0 text-[11px] font-extrabold px-2 py-0.5 rounded-full ${violationSeverityColor}`}>
-              {violationSeverity}
-            </span>
-            {/* Adaptive counter: remaining alerts on OTHER cameras (excludes current) */}
-            {(() => {
-              const otherAlerts = alertCount - 1; // current camera counts as 1
-              if (otherAlerts <= 0) return null;
-              return (
-                <span className="shrink-0 bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/30">
-                  + {otherAlerts} autre{otherAlerts > 1 ? 's' : ''} alerte{otherAlerts > 1 ? 's' : ''} sur le site
-                </span>
-              );
-            })()}
+            <div className="flex items-center gap-3 min-w-0">
+              <AlertTriangle size={16} className="shrink-0 animate-pulse" />
+              <span className="text-sm font-bold truncate">⚠ Violation EPI en direct — {selectedCamera.name} ({selectedCamera.location})</span>
+              <span className={`shrink-0 text-[11px] font-extrabold px-2 py-0.5 rounded-full ${violationSeverityColor}`}>
+                {violationSeverity}
+              </span>
+              {/* Adaptive counter: remaining alerts on OTHER cameras (excludes current) */}
+              {(() => {
+                const otherAlerts = alertCount - 1; // current camera counts as 1
+                if (otherAlerts <= 0) return null;
+                return (
+                  <span className="shrink-0 bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/30">
+                    + {otherAlerts} autre{otherAlerts > 1 ? 's' : ''} alerte{otherAlerts > 1 ? 's' : ''} sur le site
+                  </span>
+                );
+              })()}
+            </div>
+            <button
+              onClick={() => setShowConfirmModal(true)}
+              title="Action immédiate : ouvre le formulaire de création d'incident avec les données pré-remplies"
+              className="shrink-0 bg-white text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-1.5 rounded-lg transition"
+            >
+              ⚡ Action immédiate →
+            </button>
           </div>
-          <button
-            onClick={() => setShowConfirmModal(true)}
-            title="Action immédiate : ouvre le formulaire de création d'incident avec les données pré-remplies"
-            className="shrink-0 bg-white text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-1.5 rounded-lg transition"
-          >
-            ⚡ Action immédiate →
-          </button>
-        </div>
         )}
 
-      {/* Confirmation Modal */}
-      <ConfirmIncidentModal
-        open={showConfirmModal}
-        cameraName={selectedCamera.name}
-        violationText={violationText}
-        onConfirm={() => {
-          setShowConfirmModal(false);
-          navigate('/incidents');
-        }}
-        onCancel={() => setShowConfirmModal(false)}
-      />
+        {/* Confirmation Modal */}
+        <ConfirmIncidentModal
+          open={showConfirmModal}
+          cameraName={selectedCamera.name}
+          violationText={modalIncidentType === 'zone' ? "Alerte Critique : Une violation de zone interdite a été détectée sur cette caméra." : violationText}
+          onConfirm={() => {
+            setShowConfirmModal(false);
+            navigate('/incidents');
+          }}
+          onCancel={() => setShowConfirmModal(false)}
+        />
 
-      {/* Frame Captured Toast */}
-      {frameCaptured && (
-        <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 duration-300">
-          <Camera size={15} className="text-orange-400" />
-          Frame capturée et archivée comme preuve
-        </div>
-      )}
+        {/* Frame Captured Toast */}
+        {frameCaptured && (
+          <div className="fixed top-6 right-6 z-50 bg-gray-900 text-white text-sm font-semibold px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-in slide-in-from-top-2 duration-300">
+            <Camera size={15} className="text-orange-400" />
+            Frame capturée et archivée comme preuve
+          </div>
+        )}
 
         <div className="bg-white border-b border-gray-200 px-8 py-5">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 max-w-[1600px] mx-auto">
-          <div>
-            <h1 className="text-[26px] font-bold text-gray-800 tracking-tight">Surveillance Caméras</h1>
-            <p className="text-gray-500 text-[14px] mt-0.5 font-medium">Surveillance IA en direct – caméras fixes sur le chantier</p>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 max-w-[1600px] mx-auto">
+            <div>
+              <h1 className="text-[26px] font-bold text-gray-800 tracking-tight">Surveillance Caméras</h1>
+              <p className="text-gray-500 text-[14px] mt-0.5 font-medium">Surveillance IA en direct – caméras fixes sur le chantier</p>
+            </div>
+            <div className="flex gap-3 shrink-0">
+              <button
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm"
+                title="Télécharger un PDF de la surveillance actuelle"
+                onClick={() => alert('Téléchargement du rapport PDF en cours... (Simulation)')}
+              >
+                <BarChart2 size={15} /> Télécharger données (PDF)
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm disabled:opacity-60"
+                title="Forcer l'actualisation de tous les flux caméra"
+              >
+                <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
+                {isRefreshing ? 'Actualisation...' : 'Tout rafraîchir'}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-3 shrink-0">
-            <button
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm"
-              title="Télécharger un PDF de la surveillance actuelle"
-              onClick={() => alert('Téléchargement du rapport PDF en cours... (Simulation)')}
-            >
-              <BarChart2 size={15} /> Télécharger données (PDF)
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm disabled:opacity-60"
-              title="Forcer l'actualisation de tous les flux caméra"
-            >
-              <RefreshCw size={15} className={isRefreshing ? 'animate-spin' : ''} />
-              {isRefreshing ? 'Actualisation...' : 'Tout rafraîchir'}
-            </button>
-          </div>
-        </div>
         </div>
       </div>
 
-      <div className="px-8 py-6 space-y-6 max-w-[1600px] mx-auto">
+      <div className="px-8 py-6 pb-32 space-y-6 max-w-[1600px] mx-auto">
 
         {/* ── KPI Cards — "Alertés EPI" is clickable to filter view ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -336,13 +346,13 @@ export function CameraMonitoring() {
               </button>
             </div>
             <div className="flex bg-gray-100/80 p-1 rounded-lg gap-1 overflow-x-auto hide-scrollbar">
-              <button onClick={() => setCameraFilter('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'all' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toutes</button>
-              <button onClick={() => setCameraFilter('alert')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'alert' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' : 'text-gray-500 hover:text-gray-700'}`}>En Alerte</button>
-              <button onClick={() => setCameraFilter('ok')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'ok' ? 'bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100' : 'text-gray-500 hover:text-gray-700'}`}>Conformes</button>
-              <button onClick={() => setCameraFilter('maintenance')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'maintenance' ? 'bg-amber-50 text-amber-600 shadow-sm border border-amber-100' : 'text-gray-500 hover:text-gray-700'}`}>Maintenance</button>
+              <button onClick={() => setCameraFilter('all')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'all' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toutes ({cameraList.length})</button>
+              <button onClick={() => setCameraFilter('alert')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'alert' ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' : 'text-gray-500 hover:text-gray-700'}`}>En Alerte {alertCount > 0 && `(${alertCount})`}</button>
+              <button onClick={() => setCameraFilter('ok')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'ok' ? 'bg-emerald-50 text-emerald-600 shadow-sm border border-emerald-100' : 'text-gray-500 hover:text-gray-700'}`}>Conformes ({okCount})</button>
+              <button onClick={() => setCameraFilter('maintenance')} className={`px-3 py-1.5 text-xs font-bold rounded-md whitespace-nowrap transition-colors ${cameraFilter === 'maintenance' ? 'bg-amber-50 text-amber-600 shadow-sm border border-amber-100' : 'text-gray-500 hover:text-gray-700'}`}>Maintenance {maintenanceCount > 0 && `(${maintenanceCount})`}</button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-4">
+          <div className="flex overflow-x-auto gap-3 px-4 py-4 hide-scrollbar snap-x scroll-smooth">
             {filteredCameraList.map(cam => {
               const camMissingVests = cam.detections.workers - cam.detections.vests;
               const camMissingHelmets = cam.detections.workers - cam.detections.helmets;
@@ -353,7 +363,7 @@ export function CameraMonitoring() {
                 <button
                   key={cam.id}
                   onClick={() => handleSelectCamera(cam)}
-                  className={`group text-left border-2 rounded-2xl overflow-hidden transition-all shadow-sm hover:shadow-md focus-visible:ring-4 focus-visible:ring-site-orange focus-visible:outline-none focus-visible:border-none
+                  className={`shrink-0 w-44 snap-start group text-left border-2 rounded-2xl overflow-hidden transition-all shadow-sm hover:shadow-md focus-visible:ring-4 focus-visible:ring-site-orange focus-visible:outline-none focus-visible:border-none
                     ${selectedCamera.id === cam.id
                       ? 'border-[#F97215] ring-2 ring-orange-200'
                       : camAlertCount > 0
@@ -432,12 +442,12 @@ export function CameraMonitoring() {
                 </div>
                 {/* Zone location link + zone type badge */}
                 <button
-                  onClick={() => navigate('/rules', { state: { zone: selectedCamera.location } })}
-                  title={`Voir les règles HSE configurées pour ${selectedCamera.location}`}
+                  onClick={() => navigate('/map', { state: { zone: selectedCamera.location } })}
+                  title={`Voir la zone sur le plan du site : ${selectedCamera.location}`}
                   className="flex items-center gap-1.5 text-sm text-[#F97215] hover:text-orange-600 font-semibold transition-colors group mt-0.5"
                 >
-                  <MapPin size={12} className="text-gray-400" />
-                  {selectedCamera.location}
+                  <MapPin size={12} className="text-[#F97215]" />
+                  <span className="underline decoration-transparent group-hover:decoration-orange-300 underline-offset-2 transition-all">{selectedCamera.location}</span>
                   <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
                 {/* Zone type badge — derived from location name heuristic */}
@@ -456,14 +466,25 @@ export function CameraMonitoring() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {/* Frame Capture button — always visible for any active camera (alert OR compliant = preuve traçable) */}
+              {/* Toggle IA Overlays */}
               {selectedCamera.status === 'active' && (
                 <button
-                  onClick={handleCaptureFrame}
-                  title="Capturer et archiver la frame actuelle comme preuve d'inspection (conformité ou violation)"
-                  className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 rounded-xl text-sm font-bold transition shadow-sm"
+                  onClick={() => setShowOverlays(v => !v)}
+                  title={showOverlays ? "Masquer temporairement les détections IA pour voir l'image originale" : "Afficher les détections IA"}
+                  className={`flex items-center gap-2 px-3 py-2.5 border rounded-xl text-sm font-bold transition shadow-sm ${showOverlays ? 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100'}`}
                 >
-                  <Camera size={15} /> Capturer frame
+                  <User size={15} />
+                  <span className="hidden sm:inline">IA {showOverlays ? 'ON' : 'OFF'}</span>
+                </button>
+              )}
+              {/* Replay button for active violations */}
+              {selectedCamera.status === 'active' && hasViolation && (
+                <button
+                  onClick={() => alert("Lecture du replay vidéo des 30 dernières secondes centralisées... (Simulation)")}
+                  title="Voir la vidéo de l'infraction (30s en arrière)"
+                  className="flex items-center gap-2 px-3 py-2.5 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-bold transition shadow-sm"
+                >
+                  <Clock size={15} /> Voir replay 30s
                 </button>
               )}
               <button className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-bold transition shadow-sm group" title="Agrandir et centrer le flux vidéo">
@@ -483,26 +504,51 @@ export function CameraMonitoring() {
                   <Circle size={8} className="fill-red-500 text-red-500 animate-pulse" />
                   <span className="text-white text-sm font-bold tracking-wide">ENREGISTREMENT EN DIRECT</span>
                 </div>
-                <div className="bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+                <div className="bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-lg w-max">
                   <span className="text-white text-sm font-mono">10:23:45 AM</span>
                 </div>
               </div>
 
-              {/* AI Detection Overlays */}
+              {/* Frame Capture button overlay */}
               {selectedCamera.status === 'active' && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleCaptureFrame(); }}
+                  title="Capturer et archiver la frame actuelle comme preuve"
+                  className="absolute top-4 right-4 z-20 bg-black/70 hover:bg-black/90 text-white backdrop-blur-sm px-3 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold tracking-wide transition shadow-lg border border-white/20 hover:border-white/40"
+                >
+                  <Camera size={15} /> Capturer frame
+                </button>
+              )}
+
+              {/* AI Detection Overlays */}
+              {selectedCamera.status === 'active' && showOverlays && (
                 <>
-                  <div className="absolute top-1/4 left-1/4 border-2 border-emerald-500 rounded-lg p-1 shadow">
+                  <div className="absolute top-1/4 left-1/4 border-2 border-emerald-500 rounded-lg p-1 shadow group cursor-help">
                     <span className="bg-emerald-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">Ouvrier ✓</span>
+                    <div className="absolute top-full mt-1 left-0 bg-gray-900 text-white text-[10px] p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none w-max z-10 font-medium tracking-wide">
+                      IA Confiance: 97%<br />Tracking ID: #842
+                    </div>
                   </div>
-                  <div className="absolute top-1/3 right-1/3 border-2 border-emerald-500 rounded-lg p-1 shadow">
+                  <div className="absolute top-1/3 right-1/3 border-2 border-emerald-500 rounded-lg p-1 shadow group cursor-help">
                     <span className="bg-emerald-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">Casque ✓</span>
+                    <div className="absolute top-full mt-1 left-0 bg-gray-900 text-white text-[10px] p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none w-max z-10 font-medium tracking-wide">
+                      IA Confiance: 94%<br />Port correct: Oui
+                    </div>
                   </div>
-                  <div className="absolute bottom-1/4 left-1/3 border-2 border-blue-500 rounded-lg p-1 shadow">
+                  <div className="absolute bottom-1/4 left-1/3 border-2 border-blue-500 rounded-lg p-1 shadow group cursor-help">
                     <span className="bg-blue-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">Véhicule</span>
+                    <div className="absolute top-full mt-1 left-0 bg-gray-900 text-white text-[10px] p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none w-max z-10 font-medium tracking-wide">
+                      IA Confiance: 96%<br />Type: Engin de chantier
+                    </div>
                   </div>
                   {hasViolation && (
-                    <div className="absolute top-1/2 right-1/4 border-2 border-red-500 rounded-lg p-1 shadow">
-                      <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">Gilet Manquant ⚠</span>
+                    <div className="absolute top-1/2 right-1/4 border-2 border-red-500 rounded-lg p-1 shadow group cursor-help animate-pulse">
+                      <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded">
+                        {missingVests > 0 && missingHelmets > 0 ? 'EPI Manquants ⚠' : missingVests > 0 ? 'Gilet Manquant ⚠' : 'Casque Manquant ⚠'}
+                      </span>
+                      <div className="absolute top-full mt-1 left-0 bg-red-900 text-white text-[10px] p-2 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none w-max z-10 font-medium whitespace-nowrap tracking-wide leading-relaxed">
+                        IA Confiance: {missingVests > 0 ? 85 : 89}%<br />Alerte: {missingVests > 0 && missingHelmets > 0 ? 'Gilet + Casque absents' : missingVests > 0 ? 'Absence de gilet HV' : 'Absence de casque'}<br />Action requise
+                      </div>
                     </div>
                   )}
                 </>
@@ -510,15 +556,16 @@ export function CameraMonitoring() {
 
               {/* Maintenance overlay */}
               {selectedCamera.status === 'maintenance' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  <div className="text-center">
-                    <div className="text-amber-400 text-4xl mb-2">⚙</div>
-                    <div className="text-white font-bold text-lg">Caméra en maintenance</div>
-                    <div className="text-gray-400 text-sm mt-1">Flux temporairement indisponible</div>
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 overflow-hidden">
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgNDBoNDBWMHgtNDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMTAgTDEwIDAgTDIwIDAgTDAgMjAgWk00MCAzMCBMMzAgNDAgTDQwIDQwIFoiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-20 pointer-events-none" />
+                  <div className="text-center relative z-10">
+                    <div className="text-amber-400 mb-3 flex justify-center animate-pulse"><AlertTriangle size={48} strokeWidth={1.5} /></div>
+                    <div className="text-white font-bold text-xl tracking-tight">Caméra en maintenance</div>
+                    <div className="text-gray-400 text-sm mt-1.5 font-medium">Flux vidéo temporairement indisponible</div>
                     {/* Maintenance duration (Image 3 improvement) */}
-                    <div className="mt-3 flex items-center justify-center gap-2 bg-black/40 backdrop-blur-sm px-4 py-2 rounded-lg">
-                      <Clock size={14} className="text-amber-300" />
-                      <span className="text-amber-200 text-sm font-semibold">Hors ligne depuis {maintenanceSince}</span>
+                    <div className="mt-5 inline-flex items-center justify-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 px-5 py-2.5 rounded-xl shadow-2xl">
+                      <Clock size={15} className="text-amber-400" />
+                      <span className="text-amber-50 text-sm font-bold tracking-wide">Hors ligne depuis {maintenanceSince}</span>
                     </div>
                   </div>
                 </div>
@@ -540,7 +587,9 @@ export function CameraMonitoring() {
               </div>
               <div className="flex items-center gap-2">
                 <Activity size={14} className="text-gray-400" />
-                <span className="text-gray-600 text-sm font-medium">IPS : <b className="text-gray-800">{selectedCamera.fps}</b></span>
+                <span className={`text-sm font-medium ${selectedCamera.status === 'maintenance' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  IPS : <b className={`${selectedCamera.status === 'maintenance' ? 'text-gray-400' : 'text-gray-800'}`}>{selectedCamera.fps}</b>
+                </span>
               </div>
               {/* Last check timestamp */}
               {selectedCamera.status === 'active' && (
@@ -593,11 +642,15 @@ export function CameraMonitoring() {
                     });
                     return timelineEvents.map((ev, i, arr) => (
                       <div key={i} className="flex items-center gap-2 shrink-0">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className={`w-2.5 h-2.5 rounded-full ${ev.color} ${ev.resolved ? 'opacity-40' : ''}`} title={ev.label} />
+                        <button
+                          onClick={() => alert(`Rechargement du flux au timestamp: ${ev.time} (Simulation)`)}
+                          className="flex flex-col items-center gap-1 hover:bg-gray-100 p-1.5 rounded-lg transition-colors group cursor-pointer"
+                          title="Cliquer pour revoir ce moment"
+                        >
+                          <div className={`w-2.5 h-2.5 rounded-full ${ev.color} ${ev.resolved ? 'opacity-40' : 'group-hover:scale-125 transition-transform'}`} title={ev.label} />
                           <span className="text-[9px] text-gray-400 font-mono whitespace-nowrap">{ev.time}</span>
-                          <span className={`text-[9px] font-semibold whitespace-nowrap max-w-[72px] text-center leading-tight ${ev.resolved ? 'text-gray-400 line-through' : 'text-gray-600'}`}>{ev.label}</span>
-                        </div>
+                          <span className={`text-[9px] font-semibold whitespace-nowrap max-w-[72px] text-center leading-tight ${ev.resolved ? 'text-gray-400 line-through' : 'text-gray-600 group-hover:text-[#F97215]'}`}>{ev.label}</span>
+                        </button>
                         {i < arr.length - 1 && <div className="w-8 h-px bg-gray-200 shrink-0 mb-4" />}
                       </div>
                     ));
@@ -629,17 +682,18 @@ export function CameraMonitoring() {
                         {(() => {
                           const pct = item.confidence;
                           const tier = pct >= 90
-                            ? { color: 'text-emerald-600', label: `Confiance élevée (${pct}%)`, dot: 'bg-emerald-400' }
+                            ? { color: 'text-emerald-600', label: `Confiance élevée (${pct}%)`, dot: 'bg-emerald-400', help: 'Conditions optimales pour l\'IA' }
                             : pct >= 80
-                              ? { color: 'text-amber-600', label: `Vérification recommandée (${pct}%)`, dot: 'bg-amber-400' }
-                              : { color: 'text-red-500', label: `Confiance faible (${pct}%) — vérifier manuellement`, dot: 'bg-red-500' };
+                              ? { color: 'text-amber-600', label: `Vérification recommandée (${pct}%)`, dot: 'bg-amber-400', help: 'Luminosité ou angle de vue sous-optimal' }
+                              : { color: 'text-red-500', label: `Confiance faible (${pct}%) — vérifier manuellement`, dot: 'bg-red-500', help: 'Obstruction partielle ou conditions complexes' };
                           return (
                             <span
-                              title={`Niveau de confiance IA : ${pct}% ${pct < 90 ? '\u2014 une vérification manuelle est conseillée avant validation' : ''}`}
-                              className={`flex items-center gap-1 text-[10px] font-semibold ${tier.color}`}
+                              title={`Niveau de confiance IA : ${pct}%. ${tier.help}`}
+                              className={`flex items-center gap-1.5 text-[10px] font-semibold ${tier.color} transition-colors hover:opacity-80 cursor-help w-max`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${tier.dot} shrink-0`} />
                               {tier.label}
+                              <Info size={11} className="opacity-70" />
                             </span>
                           );
                         })()}
@@ -662,6 +716,71 @@ export function CameraMonitoring() {
                       </div>
                     </div>
                   ))}
+
+                  {/* ── Context-Specific Detections (Project-Spec Phase 4) ── */}
+                  <div className="mt-2 pt-3 border-t border-gray-100 space-y-2">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Détections Contextuelles IA</div>
+
+                    {/* Proximity: Workers near Machinery */}
+                    {(() => {
+                      // Simulated: cameras covering 'engin' zones or with vehicles may detect proximity
+                      const hasProximityRisk = selectedCamera.detections.vehicles > 0 && selectedCamera.detections.workers > 2;
+                      return (
+                        <div className={`flex items-start justify-between gap-2 p-3 rounded-xl border transition-colors ${
+                          hasProximityRisk ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-100'
+                        }`}>
+                          <div className="flex items-start gap-2.5">
+                            <Truck size={15} className={`shrink-0 mt-0.5 ${hasProximityRisk ? 'text-red-500' : 'text-gray-400'}`} />
+                            <div>
+                              <div className={`font-semibold text-sm ${hasProximityRisk ? 'text-red-700' : 'text-gray-600'}`}>
+                                Proximité dangereuse engin
+                              </div>
+                              <div className={`text-[10px] font-semibold mt-0.5 ${hasProximityRisk ? 'text-red-500' : 'text-emerald-600'}`}>
+                                {hasProximityRisk
+                                  ? `⚠️ ${selectedCamera.detections.workers} ouvriers à moins de 3m d'un engin — Risque collision`
+                                  : '✓ Aucune proximité dangereuse détectée'}
+                              </div>
+                            </div>
+                          </div>
+                          {hasProximityRisk && (
+                            <span className="shrink-0 text-[10px] font-extrabold px-2 py-0.5 bg-red-600 text-white rounded-full animate-pulse">
+                              CRITIQUE
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Posture & Behavior Risk */}
+                    {(() => {
+                      const hasBehaviorRisk = selectedCamera.detections.workers > 3 && hasViolation;
+                      return (
+                        <div className={`flex items-start justify-between gap-2 p-3 rounded-xl border transition-colors ${
+                          hasBehaviorRisk ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100'
+                        }`}>
+                          <div className="flex items-start gap-2.5">
+                            <BarChart2 size={15} className={`shrink-0 mt-0.5 ${hasBehaviorRisk ? 'text-amber-600' : 'text-gray-400'}`} />
+                            <div>
+                              <div className={`font-semibold text-sm ${hasBehaviorRisk ? 'text-amber-700' : 'text-gray-600'}`}>
+                                Posture / Comportement à risque
+                              </div>
+                              <div className={`text-[10px] font-semibold mt-0.5 ${hasBehaviorRisk ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                {hasBehaviorRisk
+                                  ? '⚠️ Posture anormale détectée — analyse en cours'
+                                  : '✓ Aucun comportement à risque détecté'}
+                              </div>
+                            </div>
+                          </div>
+                          {hasBehaviorRisk && (
+                            <span className="shrink-0 text-[10px] font-extrabold px-2 py-0.5 bg-amber-500 text-white rounded-full">
+                              MODÉRÉ
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                 </div>
               </div>
 
@@ -679,7 +798,13 @@ export function CameraMonitoring() {
                   ].map(item => (
                     <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                       <span className="text-gray-400 font-semibold text-xs uppercase tracking-wide">{item.label}</span>
-                      <span className="text-gray-700 font-bold text-sm text-right">{item.value}</span>
+                      {item.label === 'Emplacement' ? (
+                        <button onClick={() => navigate('/map', { state: { zone: selectedCamera.location } })} className="text-[#F97215] hover:text-orange-700 font-bold text-sm text-right flex items-center gap-1.5 focus:outline-none underline decoration-transparent hover:decoration-orange-400 underline-offset-2 transition-all group">
+                          {item.value} <ExternalLink size={10} className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      ) : (
+                        <span className="text-gray-700 font-bold text-sm text-right">{item.value}</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -764,16 +889,24 @@ export function CameraMonitoring() {
                   <p className="text-red-100 text-sm mb-4 leading-relaxed">
                     {activeZoneViolation.description}
                   </p>
-                  <div className="flex items-center gap-3 text-xs text-red-200 mb-4">
-                    <span>📍 {activeZoneViolation.zone}</span>
-                    <span>🕐 Détecté à {activeZoneViolation.time}</span>
+                  <div className="flex items-center gap-4 text-xs text-red-100 font-semibold mb-5">
+                    <button
+                      onClick={() => navigate('/map', { state: { zone: activeZoneViolation.zone } })}
+                      className="flex items-center gap-1.5 focus:outline-none hover:text-white transition-colors group"
+                      title="Voir la zone critique sur le plan du site"
+                    >
+                      <MapPin size={13} className="text-red-400 group-hover:text-red-300" />
+                      <span className="underline decoration-red-400 decoration-dashed group-hover:decoration-solid underline-offset-4">{activeZoneViolation.zone}</span>
+                      <ExternalLink size={10} className="text-red-400 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                    <span className="flex items-center gap-1.5 bg-red-950/50 px-2.5 py-1 rounded-md border border-red-800"><Clock size={12} className="text-red-400" /> Détecté à {activeZoneViolation.time}</span>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <button
                       onClick={() => openModal('zone')}
                       className="flex-1 bg-white text-red-700 hover:bg-red-50 py-2.5 rounded-xl font-bold text-sm transition shadow-md flex items-center justify-center gap-2"
                     >
-                      <AlertTriangle size={15} /> Créer Incident CRITIQUE
+                      <AlertTriangle size={15} /> {hasViolation ? "Créer Incident Multiples (Zone + EPI)" : "Créer Incident CRITIQUE"}
                     </button>
                     <button
                       onClick={() => navigate('/alerts')}
@@ -787,9 +920,8 @@ export function CameraMonitoring() {
             );
           })()}
 
-          {/* PPE Violation Alert — severity badge + confidence warning + confirmation modal */}
           {hasViolation && (
-            <div className="bg-white rounded-2xl border border-red-200 shadow-sm p-5">
+            <div className="relative mt-2 bg-white rounded-2xl border-2 border-red-300 shadow-[0_10px_40px_-10px_rgba(239,68,68,0.3)] p-5 animate-in slide-in-from-bottom-5 duration-300">
               <h3 className="text-gray-700 font-bold text-sm flex items-center gap-2 mb-4 pb-3 border-b border-red-100">
                 <AlertTriangle size={15} className="text-red-500" />
                 <span className="text-red-600">Violation EPI détectée en direct</span>
@@ -852,16 +984,31 @@ export function CameraMonitoring() {
                   <CheckCircle size={20} className="text-white" />
                 </div>
                 <div>
-                  <div className="font-bold text-emerald-700 text-sm">Ouvriers en conformité EPI</div>
-                  <div className="text-emerald-600 text-xs mt-0.5">
-                    Aucune violation détectée sur {selectedCamera.name}.
+                  <div className="font-bold text-emerald-700 text-sm flex items-center gap-2">
+                    Ouvriers en conformité EPI
+                    {certifiedComplianceTime && (
+                      <span className="bg-emerald-200 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded-sm font-extrabold uppercase tracking-widest shadow-sm">Certifié à {formatLastCheck(certifiedComplianceTime)}</span>
+                    )}
+                  </div>
+                  <div className="text-emerald-600 text-xs mt-0.5 flex flex-wrap items-center gap-x-2">
+                    <span>Aucune violation détectée sur {selectedCamera.name}.</span>
                     {/* Compliance duration with tooltip explaining the calculation basis */}
                     <span
-                      className="ml-1 font-bold cursor-help border-b border-dashed border-emerald-400"
+                      className="font-bold cursor-help border-b border-dashed border-emerald-400"
                       title="Durée calculée depuis la sélection de cette caméra — pas depuis la dernière détection IA"
                     >
                       Conforme depuis {getComplianceDuration()}.
                     </span>
+                    {!certifiedComplianceTime && (
+                      <button
+                        onClick={() => setCertifiedComplianceTime(new Date())}
+                        className="mt-3 sm:mt-0 sm:ml-4 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md flex items-center gap-2"
+                        title="Ajouter au rapport journalier"
+                      >
+                        <CheckCircle size={14} />
+                        Certifier l'inspection conforme
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -911,18 +1058,18 @@ export function CameraMonitoring() {
                     </div>
                   </div>
                   {/* Action buttons for uncovered zones */}
-                  <div className="flex flex-wrap gap-2 ml-7">
-                    <button
-                      onClick={() => alert('Redirection vers Inspection Photo manuelle (Simulation)')}
-                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 bg-white border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition"
-                    >
-                      📷 Inspection photo manuelle
-                    </button>
+                  <div className="flex flex-wrap items-center gap-4 ml-7">
                     <button
                       onClick={() => navigate('/drones', { state: { zone: uncoveredZones[0], reason: `Substitution caméra ${selectedCamera.name} hors ligne` } })}
-                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-sm"
+                      className="flex items-center gap-2 text-sm font-extrabold px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition shadow-[0_0_15px_rgba(220,38,38,0.4)] ring-2 ring-offset-1 ring-red-400 animate-pulse"
                     >
-                      🚁 Déployer un drone →
+                      🚁 Déployer un drone immédiatement →
+                    </button>
+                    <button
+                      onClick={() => alert('Redirection vers Inspection Photo manuelle (Simulation)')}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3 py-2.5 bg-white border-2 border-red-200 text-red-700 rounded-xl hover:bg-red-50 transition"
+                    >
+                      📷 Inspection photo manuelle
                     </button>
                   </div>
                 </div>

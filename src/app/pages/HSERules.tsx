@@ -198,29 +198,11 @@ export function HSERules() {
                 const rType = RT[rule.type];
                 const Icon = rType.icon;
 
-                return editingRuleId === rule.id ? (
-                  /* Edit Rule Form inline */
-                  <form key={rule.id} onSubmit={saveEditRule} className="bg-orange-50/50 border border-orange-200 rounded-xl p-3 space-y-3">
-                    <input autoFocus required value={editingRuleName} onChange={e => setEditingRuleName(e.target.value)}
-                      className="w-full bg-white border border-orange-200 px-3 py-2 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                    <select value={editingRuleType} onChange={e => setEditingRuleType(e.target.value as RuleType)}
-                      className="w-full bg-white border border-orange-200 px-3 py-2 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400">
-                      <option value="ppe">EPI Requis</option>
-                      <option value="distance">Distance de Sécurité</option>
-                      <option value="zone_access">Accès Restreint</option>
-                      <option value="speed_limit">Limite de Vitesse</option>
-                    </select>
-                    <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={() => setEditingRuleId(null)} className="flex-1 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600">Annuler</button>
-                      <button type="submit" className="flex-1 py-1.5 bg-[#F97215] text-white rounded-lg text-xs font-bold shadow-sm">Enregistrer</button>
-                    </div>
-                  </form>
-                ) : (
-                  /* Rule Item */
+                return (
                   <button
                     key={rule.id}
                     onClick={() => setSelectedId(rule.id)}
-                    className={`w-full group text-left p-3.5 rounded-xl border-2 transition-all duration-200
+                    className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-200
                       ${isSelected ? 'border-[#F97215] bg-orange-50/30' : 'border-transparent bg-white hover:border-gray-200 hover:bg-gray-50'}`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -235,16 +217,6 @@ export function HSERules() {
                             <span className="text-gray-300">•</span>
                             <span className="text-gray-500 text-[11px] font-medium">{rule.zones.length} zone{rule.zones.length > 1 ? 's' : ''} appliquée{rule.zones.length > 1 ? 's' : ''}</span>
                           </div>
-                        </div>
-                      </div>
-                      
-                      {/* Hover actions */}
-                      <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isSelected ? 'opacity-100' : ''}`}>
-                        <div onClick={e => startEditRule(rule, e)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
-                          <Edit size={14}/>
-                        </div>
-                        <div onClick={(e) => { e.stopPropagation(); deleteRule(rule.id); }} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
-                          <Trash2 size={14}/>
                         </div>
                       </div>
                     </div>
@@ -267,13 +239,23 @@ export function HSERules() {
                     })()}
                   </div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${RT[selectedRule.type].bg} ${RT[selectedRule.type].color}`}>
-                        Type {RT[selectedRule.type].label}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200">
-                        Règle Active
-                      </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${RT[selectedRule.type].bg} ${RT[selectedRule.type].color}`}>
+                          Type {RT[selectedRule.type].label}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200">
+                          Règle Active
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={(e) => startEditRule(selectedRule, e)} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition flex items-center gap-1.5">
+                          <Edit size={14}/> Modifier
+                        </button>
+                        <button onClick={() => deleteRule(selectedRule.id)} className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-bold hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition flex items-center gap-1.5">
+                          <Trash2 size={14}/> Supprimer
+                        </button>
+                      </div>
                     </div>
                     <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight mb-2">
                       {selectedRule.name}
@@ -317,9 +299,9 @@ export function HSERules() {
                                   </div>
                                   <span className="font-bold text-gray-700 text-sm truncate">{zone}</span>
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={() => startEditZone(idx, zone)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"><Edit size={14}/></button>
-                                  <button onClick={() => deleteZone(idx)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => startEditZone(idx, zone)} className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors" title="Modifier la zone"><Edit size={14}/></button>
+                                  <button onClick={() => deleteZone(idx)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Retirer la zone"><Trash2 size={14}/></button>
                                 </div>
                               </>
                             )}
@@ -392,6 +374,52 @@ export function HSERules() {
                 <button type="submit"
                   className="flex-1 px-4 py-3 bg-[#F97215] text-white rounded-xl text-sm font-bold hover:bg-[#ea660c] transition shadow-md shadow-orange-200 flex items-center justify-center gap-2">
                   <CheckCircle size={16}/> Créer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Rule Modal ── */}
+      {editingRuleId !== null && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-gray-800 text-lg font-bold flex items-center gap-2"><Edit size={20} className="text-blue-500"/> Modifier la Règle</h3>
+                <p className="text-gray-400 text-xs font-semibold mt-1">Mettre à jour la configuration de la règle HSE</p>
+              </div>
+              <button type="button" onClick={() => setEditingRuleId(null)} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-lg transition-colors">
+                <X size={20}/>
+              </button>
+            </div>
+
+            <form onSubmit={saveEditRule} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Nom de la Règle</label>
+                <input autoFocus type="text" required value={editingRuleName} onChange={e => setEditingRuleName(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type d'Application</label>
+                <select value={editingRuleType} onChange={e => setEditingRuleType(e.target.value as RuleType)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                  <option value="ppe">Équipement de Protection Individuelle (EPI)</option>
+                  <option value="distance">Proximité des Machines Obligatoire</option>
+                  <option value="zone_access">Accès à une Zone Restreinte</option>
+                  <option value="speed_limit">Limite de Vitesse des Véhicules</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
+                <button type="button" onClick={() => setEditingRuleId(null)}
+                  className="flex-1 px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition">
+                  Annuler
+                </button>
+                <button type="submit"
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition shadow-md shadow-blue-200 flex items-center justify-center gap-2">
+                  <CheckCircle size={16}/> Enregistrer
                 </button>
               </div>
             </form>

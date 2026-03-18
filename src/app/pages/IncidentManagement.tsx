@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import {
   FileText, AlertTriangle, User, Calendar, MapPin,
-  CheckCircle, Clock, Plus, Filter, Download,
+  CheckCircle, Clock, Filter, Download,
   BarChart2, Image as ImageIcon, MessageSquare, Upload,
-  ClipboardCheck, ChevronDown,
+  ClipboardCheck, ChevronDown, Bell,
 } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-import { mockIncidents as incidents, Incident, IncidentStatus, IncidentPriority } from '../data/mockData';
+import { mockIncidents as incidents, Incident, IncidentStatus } from '../data/mockData';
 
 // ─── Style config ─────────────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ export function IncidentManagement() {
   const [filter, setFilter]          = useState<IncidentStatus | 'all'>('all');
   const [detailOpen, setDetailOpen]  = useState(false);   // mobile only
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const filtered = filter === 'all' ? incidents : incidents.filter(i => i.status === filter);
 
@@ -58,9 +59,6 @@ export function IncidentManagement() {
             >
               <BarChart2 size={15}/> Exporter le rapport
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#F97215] text-white rounded-lg text-sm font-semibold hover:bg-[#ea660c] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-md shadow-orange-200">
-              <Plus size={16}/> Nouvel Incident
-            </button>
           </div>
         </div>
       </div>
@@ -77,6 +75,27 @@ export function IncidentManagement() {
 
         {/* ── Incident List Table ── */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+
+          {/* Bulk Action Bar (Visible only when items are selected) */}
+          {selectedIds.length > 0 && (
+            <div className="bg-orange-50 text-orange-800 px-5 py-3 border-b border-orange-100 flex items-center justify-between animate-in fade-in">
+              <span className="font-bold text-sm">{selectedIds.length} incident(s) sélectionné(s)</span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setToastMessage('Les incidents sélectionnés ont été clôturés.'); setSelectedIds([]); }}
+                  className="px-4 py-1.5 bg-[#F97215] text-white rounded-lg text-xs font-bold hover:bg-[#ea660c] shadow-sm transition-colors"
+                >
+                  Clôturer la sélection
+                </button>
+                <button 
+                  onClick={() => { setToastMessage('Les entreprises responsables ont été relancées.'); setSelectedIds([]); }}
+                  className="px-4 py-1.5 bg-white border border-orange-200 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors"
+                >
+                  Relancer les entreprises
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Filter bar */}
           <div className="flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
@@ -100,7 +119,16 @@ export function IncidentManagement() {
           </div>
 
           {/* Column headers */}
-          <div className="hidden md:grid grid-cols-[2.5fr_1.5fr_1fr_1fr_1fr_auto] px-5 py-2.5 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500 font-bold bg-gray-50/30">
+          <div className="hidden md:grid grid-cols-[30px_auto_2.5fr_1.5fr_1fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500 font-bold bg-gray-50/30 items-center">
+            <div className="flex justify-center -ml-1">
+               <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-gray-300 text-[#F97215] focus:ring-[#F97215] cursor-pointer"
+                  checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                  onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])}
+               />
+            </div>
+            <span></span>
             <span>Détails de l'incident</span><span>Emplacement</span><span>Priorité</span><span>Date limite</span><span>Statut</span><span className="text-right">Action</span>
           </div>
 
@@ -108,12 +136,24 @@ export function IncidentManagement() {
           <div className="divide-y divide-gray-100">
             {filtered.map(inc => (
               <div key={inc.id}>
-                <button
+                <div
                   onClick={() => { setSelected(inc); setDetailOpen(open => inc.id === selected.id ? !open : true); }}
-                  className={`w-full text-left flex items-start gap-4 px-5 py-4 border-l-4 transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-site-orange focus-visible:outline-none
+                  className={`w-full text-left flex items-start gap-3 md:gap-4 px-5 py-4 border-l-4 transition-colors cursor-pointer
                     ${P[inc.priority].left}
                     ${selected.id === inc.id && detailOpen ? 'bg-orange-50/50' : 'hover:bg-gray-50'}`}
                 >
+                  {/* Checkbox */}
+                  <div className="hidden md:flex w-6 pt-3 justify-center shrink-0 -ml-1">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-gray-300 text-[#F97215] focus:ring-[#F97215] cursor-pointer"
+                      checked={selectedIds.includes(inc.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        setSelectedIds(prev => e.target.checked ? [...prev, inc.id] : prev.filter(id => id !== inc.id));
+                      }}
+                    />
+                  </div>
                   {/* Thumb */}
                   <div className="hidden sm:block w-11 h-11 rounded-xl overflow-hidden border border-gray-200 shrink-0 mt-0.5">
                     <ImageWithFallback src={inc.images[0]} alt={inc.title} className="w-full h-full object-cover"/>
@@ -144,7 +184,7 @@ export function IncidentManagement() {
                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${S[inc.status].badge}`}>{S[inc.status].label}</span>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded ${P[inc.priority].badge}`}>{P[inc.priority].label}</span>
                   </div>
-                </button>
+                </div>
 
                 {/* ── Inline Detail Panel (expands under the row) ── */}
                 {selected.id === inc.id && detailOpen && (
@@ -254,11 +294,14 @@ export function IncidentManagement() {
                           <><Btn color="emerald" icon={<CheckCircle size={14}/>} label="Marquer comme Résolu"/>
                           <Btn color="slate" icon={<User size={14}/>} label="Réassigner"/></>
                         )}
+                        {(selected.status === 'open' || selected.status === 'in-progress') && new Date(selected.deadline) < new Date() && (
+                          <Btn color="red" icon={<Bell size={14}/>} label="Relancer l'entreprise (En retard)"/>
+                        )}
                         {selected.status === 'resolved' && (
-                          <Btn color="blue" icon={<FileText size={14}/>} label="Fermer l'incident"/>
+                          <Btn color="blue" icon={<FileText size={14}/>} label="Levée de la non-conformité"/>
                         )}
                         <Btn color="slate" icon={<MessageSquare size={14}/>} label="Ajouter un commentaire"/>
-                        <Btn color="slate" icon={<Upload size={14}/>} label="Envoyer des preuves"/>
+                        <Btn color="slate" icon={<Upload size={14}/>} label="Soumettre preuve de correction"/>
                         <Btn color="slate" icon={<Download size={14}/>} label="Télécharger le rapport"/>
                       </div>
                     </Section>

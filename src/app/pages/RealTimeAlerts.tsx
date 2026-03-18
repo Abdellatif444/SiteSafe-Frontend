@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   AlertTriangle, Clock, Video, MapPin, User, CheckCircle,
-  Filter, Activity, ShieldAlert, ShieldCheck, Eye, FileText, ArrowLeft, X
+  Filter, Activity, ShieldAlert, ShieldCheck, Eye, ArrowLeft, X, RefreshCw
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
@@ -329,15 +329,18 @@ export function RealTimeAlerts() {
 
                           {/* Quick Actions */}
                           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                            <h3 className="text-gray-800 font-bold text-sm mb-3">Workflow de résolution</h3>
+                            <h3 className="text-gray-800 font-bold text-sm mb-3">Actions & Résolution</h3>
                             <div className="flex flex-wrap gap-2">
                               {selectedAlert.status === 'active' && (
                                 <>
-                                  <button onClick={() => changeStatus(selectedAlert.id, 'in-progress')} className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-amber-200 transition flex items-center justify-center gap-2">
+                                  <button onClick={() => changeStatus(selectedAlert.id, 'in-progress')} className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-amber-200 transition flex items-center justify-center gap-2" title="Aller vérifier sur le terrain">
                                     <Clock size={16} /> Prendre en charge
                                   </button>
-                                  <button onClick={() => changeStatus(selectedAlert.id, 'resolved')} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2">
-                                    <CheckCircle size={16} /> Résoudre immédiatement
+                                  <button onClick={() => changeStatus(selectedAlert.id, 'resolved')} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2" title="Zone vérifiée : la situation est conforme aux règles HSE">
+                                    <CheckCircle size={16} /> Certifier Zone Conforme
+                                  </button>
+                                  <button onClick={() => { window.alert('Alerte écartée comme erreur IA.'); changeStatus(selectedAlert.id, 'resolved'); }} className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2" title="Indiquer que l'IA s'est trompée">
+                                    <X size={16} /> Faux Positif
                                   </button>
                                 </>
                               )}
@@ -347,19 +350,21 @@ export function RealTimeAlerts() {
                                 </button>
                               )}
                               
-                              <button className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2">
-                                <FileText size={16} /> Créer un rapport
-                              </button>
+                              {(selectedAlert.status === 'active' || selectedAlert.status === 'in-progress') && (
+                                <button onClick={() => navigate('/incidents')} className="flex-1 sm:flex-none px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2" title="Transformer cette alerte en non-conformité officielle">
+                                  <ShieldAlert size={16} /> Créer Incident
+                                </button>
+                              )}
 
                               {(selectedAlert.status === 'in-progress' || selectedAlert.status === 'active') && (
                                 <button className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2">
-                                  <User size={16} /> Assigner un agent
+                                  <User size={16} /> Assigner
                                 </button>
                               )}
                               
-                              {selectedAlert.status !== 'active' && (
+                              {selectedAlert.status === 'resolved' && (
                                 <button onClick={() => changeStatus(selectedAlert.id, 'active')} className="ml-auto flex sm:flex-none items-center justify-center px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-xl text-sm font-bold transition gap-2">
-                                  Rouvrir l'alerte
+                                  <RefreshCw size={16} /> Rouvrir l'alerte
                                 </button>
                               )}
                             </div>

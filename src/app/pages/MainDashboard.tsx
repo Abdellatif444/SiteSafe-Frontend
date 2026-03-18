@@ -97,13 +97,16 @@ export function MainDashboard() {
                 <div className="flex-1">
                   <div className="flex items-center flex-wrap gap-2 mb-2">
                     <span
-                      className={`w-2.5 h-2.5 rounded-full shadow-sm shrink-0 ${alert.severity === 'critical'
+                      className={`w-3.5 h-3.5 rounded-full shadow-sm shrink-0 flex items-center justify-center ${alert.severity === 'critical'
                           ? 'bg-red-500 shadow-red-500/30'
                           : alert.severity === 'high'
                             ? 'bg-[#E84E1B] shadow-[#E84E1B]/30'
                             : 'bg-yellow-500 shadow-yellow-500/30'
                         }`}
-                    />
+                    >
+                      {alert.severity === 'critical' && <span className="text-white text-[9px] font-black leading-none">!</span>}
+                      {alert.severity === 'high' && <span className="text-white text-[8px] font-black leading-none">+</span>}
+                    </span>
                     <span className={`text-[15px] font-bold ${alert.isNew ? 'text-gray-900' : 'text-gray-800'}`}>{alert.type}</span>
                     {alert.isNew && (
                       <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide border border-blue-200 ml-1">
@@ -240,6 +243,71 @@ export function MainDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Démarrer une Inspection — Phase 2 du Workflow ── */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg text-gray-800 font-bold tracking-wide">Démarrer une Inspection</h2>
+            <p className="text-gray-400 text-sm font-medium mt-0.5">Déclencher une mission d'inspection selon la source de captation</p>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full">Phase 2 — Workflow</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Trigger 1: Camera */}
+          <button
+            onClick={() => navigate('/cameras')}
+            className="group flex flex-col items-start gap-4 p-5 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-2xl transition-all text-left focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none shadow-sm hover:shadow-md"
+          >
+            <div className="w-12 h-12 bg-blue-500 text-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+              <Video size={22} />
+            </div>
+            <div>
+              <div className="font-bold text-blue-800 text-sm">Surveillance Caméras</div>
+              <div className="text-blue-600 text-xs font-medium mt-0.5 leading-relaxed">Inspection automatique continue via les caméras fixes du chantier</div>
+            </div>
+            <div className="flex items-center gap-1 text-blue-600 text-xs font-bold mt-auto">
+              Ouvrir <ChevronRight size={13} />
+            </div>
+          </button>
+
+          {/* Trigger 2: Photo Manual */}
+          <button
+            onClick={() => navigate('/photos')}
+            className="group flex flex-col items-start gap-4 p-5 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-2xl transition-all text-left focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none shadow-sm hover:shadow-md"
+          >
+            <div className="w-12 h-12 bg-[#F97215] text-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+              <HardHat size={22} />
+            </div>
+            <div>
+              <div className="font-bold text-orange-800 text-sm">Inspection Manuelle Photo</div>
+              <div className="text-orange-600 text-xs font-medium mt-0.5 leading-relaxed">L'inspecteur capture et soumet des photos terrain pour analyse IA</div>
+            </div>
+            <div className="flex items-center gap-1 text-orange-600 text-xs font-bold mt-auto">
+              Ouvrir <ChevronRight size={13} />
+            </div>
+          </button>
+
+          {/* Trigger 3: Drone Mission */}
+          <button
+            onClick={() => navigate('/drones')}
+            className="group flex flex-col items-start gap-4 p-5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 rounded-2xl transition-all text-left focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none shadow-sm hover:shadow-md"
+          >
+            <div className="w-12 h-12 bg-indigo-500 text-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+              <Play size={22} />
+            </div>
+            <div>
+              <div className="font-bold text-indigo-800 text-sm">Mission Drone Planifiée</div>
+              <div className="text-indigo-600 text-xs font-medium mt-0.5 leading-relaxed">Planifier ou démarrer un vol drone pour inspection aérienne HSE/avancement</div>
+            </div>
+            <div className="flex items-center gap-1 text-indigo-600 text-xs font-bold mt-auto">
+              Ouvrir <ChevronRight size={13} />
+            </div>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
+

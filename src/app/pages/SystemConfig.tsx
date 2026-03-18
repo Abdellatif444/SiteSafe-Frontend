@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, Video, Plane, Map, Users, Save, Plus, Edit, Trash2, Bell, Shield } from 'lucide-react';
+import { Settings, Video, Plane, Users, Save, Plus, Edit, Trash2, Bell, Shield } from 'lucide-react';
 
 type ConfigSection = 'general' | 'cameras' | 'drones' | 'users' | 'notifications' | 'ai';
 
@@ -37,11 +37,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('general')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'general'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'general'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Settings size={20} />
           Paramètres Généraux
@@ -49,11 +48,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('cameras')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'cameras'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'cameras'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Video size={20} />
           Caméras
@@ -61,11 +59,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('drones')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'drones'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'drones'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Plane size={20} />
           Drones
@@ -73,11 +70,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('users')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'users'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'users'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Users size={20} />
           Utilisateurs & Permissions
@@ -85,11 +81,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('notifications')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'notifications'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'notifications'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Bell size={20} />
           Notifications
@@ -97,11 +92,10 @@ export function SystemConfig() {
 
         <button
           onClick={() => setActiveSection('ai')}
-          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${
-            activeSection === 'ai'
+          className={`w-full text-left px-4 py-3 rounded-lg transition-colors flex items-center gap-3 ${activeSection === 'ai'
               ? 'bg-orange-600 text-white'
               : 'text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
+            }`}
         >
           <Shield size={20} />
           Paramètres IA
@@ -218,11 +212,10 @@ export function SystemConfig() {
                       <td className="text-slate-300 py-3 px-4">{camera.zone}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-3 py-1 rounded text-sm ${
-                            camera.status === 'active'
+                          className={`px-3 py-1 rounded text-sm ${camera.status === 'active'
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-amber-500/20 text-amber-400'
-                          }`}
+                            }`}
                         >
                           {camera.status === 'active' ? 'Opérationnelle' : 'En maintenance'}
                         </span>
@@ -277,11 +270,10 @@ export function SystemConfig() {
                       <td className="text-slate-300 py-3 px-4">{drone.serial}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-3 py-1 rounded text-sm ${
-                            drone.status === 'disponible'
+                          className={`px-3 py-1 rounded text-sm ${drone.status === 'disponible'
                               ? 'bg-emerald-500/20 text-emerald-400'
                               : 'bg-blue-500/20 text-blue-400'
-                          }`}
+                            }`}
                         >
                           {drone.status === 'disponible' ? 'Disponible' : 'En vol'}
                         </span>
@@ -336,11 +328,10 @@ export function SystemConfig() {
                       <td className="text-slate-300 py-3 px-4">{user.email}</td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-3 py-1 rounded text-sm ${
-                            user.status === 'active'
+                          className={`px-3 py-1 rounded text-sm ${user.status === 'active'
                               ? 'bg-green-600/20 text-green-400'
                               : 'bg-slate-600/20 text-slate-400'
-                          }`}
+                            }`}
                         >
                           {user.status}
                         </span>
