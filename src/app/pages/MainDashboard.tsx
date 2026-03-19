@@ -13,12 +13,14 @@ const statsData = [
 ];
 
 import { mockAlerts, mockCameras } from '../data/mockData';
+import { useToast } from '../context/ToastContext';
 
 const recentAlerts = mockAlerts;
 const cameras = mockCameras;
 
 export function MainDashboard() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [alertFilter, setAlertFilter] = useState<'all' | 'high' | 'critical'>('all');
 
   const filteredAlerts = recentAlerts.filter(alert => {
@@ -41,7 +43,11 @@ export function MainDashboard() {
         {statsData.map((stat) => {
           const Icon = stat.icon;
           return (
-            <button key={stat.label} className="text-left w-full bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-all duration-300">
+            <button 
+              key={stat.label} 
+              onClick={() => addToast(`Filtre Rapide: "${stat.label}" (Action simulée)`, 'info')}
+              className="text-left w-full bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-all duration-300"
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className={`${stat.color} w-11 h-11 rounded-xl flex items-center justify-center shadow-sm`}>
                   <Icon size={22} strokeWidth={2.5} />

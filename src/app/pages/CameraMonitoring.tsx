@@ -10,6 +10,10 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 import { mockCameras as cameraList, mockAlerts } from '../data/mockData';
+import { useToast } from '../context/ToastContext';
+import { CreateIncidentModal } from '../components/CreateIncidentModal';
+import { CreateReportModal } from '../components/Modals';
+import { VideoReplayModal, CountAdjustModal } from '../components/AdvancedModals';
 
 // ─── Confirmation Modal ────────────────────────────────────────────────────────
 
@@ -69,6 +73,7 @@ function ConfirmIncidentModal({
 export function CameraMonitoring() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const passedCameraId = location.state?.selectedCameraId as number | undefined;
 
   const [selectedCamera, setSelectedCamera] = useState(() => {
@@ -104,6 +109,12 @@ export function CameraMonitoring() {
 
   // Manual compliance certification state
   const [certifiedComplianceTime, setCertifiedComplianceTime] = useState<Date | null>(null);
+
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isReplayModalOpen, setIsReplayModalOpen] = useState(false);
+  const [replayTimestamp, setReplayTimestamp] = useState<string | undefined>(undefined);
+  const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [isIncidentOpen, setIsIncidentOpen] = useState(false);
 
   // Maintenance mock data (Image 3 improvements)
   const maintenanceSince = '2h 15min';
@@ -293,7 +304,7 @@ export function CameraMonitoring() {
               <button
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm"
                 title="Télécharger un PDF de la surveillance actuelle"
-                onClick={() => alert('Téléchargement du rapport PDF en cours... (Simulation)')}
+                onClick={() => setIsReportModalOpen(true)}
               >
                 <BarChart2 size={15} /> Télécharger données (PDF)
               </button>
@@ -480,7 +491,7 @@ export function CameraMonitoring() {
               {/* Replay button for active violations */}
               {selectedCamera.status === 'active' && hasViolation && (
                 <button
-                  onClick={() => alert("Lecture du replay vidéo des 30 dernières secondes centralisées... (Simulation)")}
+                  onClick={() => setIsReplayModalOpen(true)}
                   title="Voir la vidéo de l'infraction (30s en arrière)"
                   className="flex items-center gap-2 px-3 py-2.5 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-sm font-bold transition shadow-sm"
                 >
@@ -643,7 +654,7 @@ export function CameraMonitoring() {
                     return timelineEvents.map((ev, i, arr) => (
                       <div key={i} className="flex items-center gap-2 shrink-0">
                         <button
-                          onClick={() => alert(`Rechargement du flux au timestamp: ${ev.time} (Simulation)`)}
+                          onClick={() => { setReplayTimestamp(ev.time); setIsReplayModalOpen(true); }}
                           className="flex flex-col items-center gap-1 hover:bg-gray-100 p-1.5 rounded-lg transition-colors group cursor-pointer"
                           title="Cliquer pour revoir ce moment"
                         >
@@ -704,7 +715,7 @@ export function CameraMonitoring() {
                         {item.check === false && <AlertTriangle size={15} className="text-red-500" />}
                         {/* Adjust button */}
                         <button
-                          onClick={() => alert("Comptage IA ajusté, modèle informé. (Simulation d'ajustement)")}
+                          onClick={() => setIsAdjustOpen(true)}
                           className="ml-1 text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100 group relative"
                           title="Ajuster manuellement ce comptage IA (correction de faux négatif/positif)"
                         >
@@ -1066,7 +1077,7 @@ export function CameraMonitoring() {
                       🚁 Déployer un drone immédiatement →
                     </button>
                     <button
-                      onClick={() => alert('Redirection vers Inspection Photo manuelle (Simulation)')}
+                      onClick={() => addToast('Redirection vers Inspection Photo manuelle (Simulation)', 'info')}
                       className="flex items-center gap-1.5 text-xs font-bold px-3 py-2.5 bg-white border-2 border-red-200 text-red-700 rounded-xl hover:bg-red-50 transition"
                     >
                       📷 Inspection photo manuelle
@@ -1125,7 +1136,7 @@ export function CameraMonitoring() {
                     </div>
                   </div>
                   <button
-                    onClick={() => alert("Formulaire de création de ticket ouvert avec les données de la caméra pré-remplies. (Simulation)")}
+                    onClick={() => setIsIncidentOpen(true)}
                     className="bg-white border border-amber-200 hover:bg-amber-100 text-amber-800 py-2.5 px-5 rounded-xl font-bold text-sm transition shadow-sm flex items-center justify-center gap-2 shrink-0"
                   >
                     Créer un ticket de maintenance
@@ -1149,6 +1160,12 @@ export function CameraMonitoring() {
           )}
         </div>
       </div>
+
+      {/* Instantiated Modals */}
+      <CreateIncidentModal isOpen={isIncidentOpen} onClose={() => setIsIncidentOpen(false)} />
+      <CreateReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+      <VideoReplayModal isOpen={isReplayModalOpen} onClose={() => { setIsReplayModalOpen(false); setReplayTimestamp(undefined); }} timestamp={replayTimestamp} />
+      <CountAdjustModal isOpen={isAdjustOpen} onClose={() => setIsAdjustOpen(false)} />
     </div>
   );
 }

@@ -10,36 +10,57 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 import { mockIncidents as incidents, Incident, IncidentStatus } from '../data/mockData';
+import { useToast } from '../context/ToastContext';
+import { AssignAgentModal, AddCommentModal } from '../components/Modals';
+import { UploadProofModal, ReminderModal, ResolutionModal } from '../components/AdvancedModals';
+
+const getInitials = (name: string) => name ? name.substring(0, 2).toUpperCase() : '??';
+const getColorFromString = (str: string) => {
+  if (!str) return 'bg-gray-500';
+  const c = str.charCodeAt(0);
+  if (c % 4 === 0) return 'bg-blue-500';
+  if (c % 4 === 1) return 'bg-emerald-500';
+  if (c % 4 === 2) return 'bg-amber-500';
+  return 'bg-purple-500';
+};
 
 // ─── Style config ─────────────────────────────────────────────────────────────
 
 const P = {
-  critical: { label: 'Critique', dot: 'bg-red-500',    badge: 'bg-red-50 text-red-600 border border-red-200',    left: 'border-l-red-500' },
-  high:     { label: 'Haute',     dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-600 border border-orange-200', left: 'border-l-orange-400' },
-  medium:   { label: 'Moyenne',   dot: 'bg-amber-500',  badge: 'bg-amber-50 text-amber-600 border border-amber-200',  left: 'border-l-amber-400' },
-  low:      { label: 'Basse',      dot: 'bg-slate-400',  badge: 'bg-slate-100 text-slate-500 border border-slate-200', left: 'border-l-slate-300' },
+  critical: { label: 'Critique', dot: 'bg-red-500', badge: 'bg-red-50 text-red-600 border border-red-200', left: 'border-l-red-500' },
+  high: { label: 'Haute', dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-600 border border-orange-200', left: 'border-l-orange-400' },
+  medium: { label: 'Moyenne', dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-600 border border-amber-200', left: 'border-l-amber-400' },
+  low: { label: 'Basse', dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500 border border-slate-200', left: 'border-l-slate-300' },
 };
 const S = {
-  'open':         { label: 'Ouvert',        badge: 'bg-red-50 text-red-600 border border-red-200'           },
-  'in-progress':  { label: 'En cours', badge: 'bg-amber-50 text-amber-600 border border-amber-200'     },
-  'resolved':     { label: 'Résolu',    badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
-  'closed':       { label: 'Fermé',      badge: 'bg-slate-100 text-slate-500 border border-slate-200'    },
+  'open': { label: 'Ouvert', badge: 'bg-red-50 text-red-600 border border-red-200' },
+  'in-progress': { label: 'En cours', badge: 'bg-amber-50 text-amber-600 border border-amber-200' },
+  'resolved': { label: 'Résolu', badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+  'closed': { label: 'Fermé', badge: 'bg-slate-100 text-slate-500 border border-slate-200' },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function IncidentManagement() {
-  const [selected, setSelected]     = useState<Incident>(incidents[0]);
-  const [filter, setFilter]          = useState<IncidentStatus | 'all'>('all');
-  const [detailOpen, setDetailOpen]  = useState(false);   // mobile only
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Incident>(incidents[0]);
+  const [filter, setFilter] = useState<IncidentStatus | 'all'>('all');
+  const [detailOpen, setDetailOpen] = useState(false);   // mobile only
+  const { addToast } = useToast();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [isCommentOpen, setIsCommentOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [isResolutionOpen, setIsResolutionOpen] = useState(false);
+  
+  const [isBatchReminderOpen, setIsBatchReminderOpen] = useState(false);
+  const [isBatchCloseOpen, setIsBatchCloseOpen] = useState(false);
 
   const filtered = filter === 'all' ? incidents : incidents.filter(i => i.status === filter);
 
   const handleExport = () => {
-    setToastMessage('Le rapport a été exporté avec succès.');
-    setTimeout(() => setToastMessage(null), 3000);
+    addToast('Le rapport a été exporté avec succès.', 'success');
   };
 
   return (
@@ -53,11 +74,11 @@ export function IncidentManagement() {
             <p className="text-gray-500 text-[14px] mt-0.5 font-medium">Suivi, gestion et résolution des non-conformités de sécurité.</p>
           </div>
           <div className="flex gap-3 shrink-0">
-            <button 
+            <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition shadow-sm"
             >
-              <BarChart2 size={15}/> Exporter le rapport
+              <BarChart2 size={15} /> Exporter CSV
             </button>
           </div>
         </div>
@@ -67,10 +88,10 @@ export function IncidentManagement() {
 
         {/* ── KPI Cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Incidents Totaux"     value={String(incidents.length)}   sub="+12% par rapport au mois dernier" subGreen icon={<FileText size={20}/>}       bg="bg-blue-50 text-blue-500"/>
-          <KpiCard label="Risques Critiques" value={String(incidents.filter(i=>i.priority==='critical').length)} sub="Action requise immédiatement" icon={<AlertTriangle size={20} strokeWidth={2.5}/>} bg="bg-red-50 text-red-500"/>
-          <KpiCard label="En retard"        value={String(incidents.filter(i=>i.status==='open').length)} sub="Nécessite une attention" icon={<Clock size={20}/>} bg="bg-amber-50 text-amber-500"/>
-          <KpiCard label="Résolus ce mois"  value={String(incidents.filter(i=>i.status==='resolved'||i.status==='closed').length)} sub="Taux de conformité 94%" icon={<CheckCircle size={20}/>} bg="bg-emerald-50 text-emerald-500"/>
+          <KpiCard label="Incidents Totaux" value={String(incidents.length)} sub="+12% par rapport au mois dernier" subGreen icon={<FileText size={20} />} bg="bg-blue-50 text-blue-500" />
+          <KpiCard label="Risques Critiques" value={String(incidents.filter(i => i.priority === 'critical').length)} sub="Action requise immédiatement" icon={<AlertTriangle size={20} strokeWidth={2.5} />} bg="bg-red-50 text-red-500" />
+          <KpiCard label="En retard" value={String(incidents.filter(i => i.status === 'open').length)} sub="Nécessite une attention" icon={<Clock size={20} />} bg="bg-amber-50 text-amber-500" />
+          <KpiCard label="Résolus ce mois" value={String(incidents.filter(i => i.status === 'resolved' || i.status === 'closed').length)} sub="Taux de conformité 94%" icon={<CheckCircle size={20} />} bg="bg-emerald-50 text-emerald-500" />
         </div>
 
         {/* ── Incident List Table ── */}
@@ -81,14 +102,14 @@ export function IncidentManagement() {
             <div className="bg-orange-50 text-orange-800 px-5 py-3 border-b border-orange-100 flex items-center justify-between animate-in fade-in">
               <span className="font-bold text-sm">{selectedIds.length} incident(s) sélectionné(s)</span>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => { setToastMessage('Les incidents sélectionnés ont été clôturés.'); setSelectedIds([]); }}
+                <button
+                  onClick={() => setIsBatchCloseOpen(true)}
                   className="px-4 py-1.5 bg-[#F97215] text-white rounded-lg text-xs font-bold hover:bg-[#ea660c] shadow-sm transition-colors"
                 >
                   Clôturer la sélection
                 </button>
-                <button 
-                  onClick={() => { setToastMessage('Les entreprises responsables ont été relancées.'); setSelectedIds([]); }}
+                <button
+                  onClick={() => setIsBatchReminderOpen(true)}
                   className="px-4 py-1.5 bg-white border border-orange-200 text-orange-700 rounded-lg text-xs font-bold hover:bg-orange-100 transition-colors"
                 >
                   Relancer les entreprises
@@ -100,9 +121,9 @@ export function IncidentManagement() {
           {/* Filter bar */}
           <div className="flex flex-wrap items-center gap-3 px-5 py-3.5 border-b border-gray-100 bg-gray-50/50">
             <button className="flex items-center gap-1.5 text-gray-500 text-sm font-semibold border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-white">
-              <Filter size={13}/> Filtres
+              <Filter size={13} /> Filtres
             </button>
-            <div className="h-5 w-px bg-gray-200"/>
+            <div className="h-5 w-px bg-gray-200" />
             <div className="flex items-center gap-1 text-sm text-gray-500 font-medium cursor-pointer select-none">
               Statut :&nbsp;
               <select value={filter} onChange={e => setFilter(e.target.value as IncidentStatus | 'all')}
@@ -113,7 +134,7 @@ export function IncidentManagement() {
                 <option value="resolved">Résolu</option>
                 <option value="closed">Fermé</option>
               </select>
-              <ChevronDown size={13}/>
+              <ChevronDown size={13} />
             </div>
             <span className="ml-auto text-xs text-gray-500 font-semibold">{filtered.length} sur {incidents.length} incidents</span>
           </div>
@@ -121,12 +142,12 @@ export function IncidentManagement() {
           {/* Column headers */}
           <div className="hidden md:grid grid-cols-[30px_auto_2.5fr_1.5fr_1fr_1fr_1fr_auto] gap-2 px-5 py-2.5 border-b border-gray-100 text-[11px] uppercase tracking-wider text-gray-500 font-bold bg-gray-50/30 items-center">
             <div className="flex justify-center -ml-1">
-               <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded border-gray-300 text-[#F97215] focus:ring-[#F97215] cursor-pointer"
-                  checked={filtered.length > 0 && selectedIds.length === filtered.length}
-                  onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])}
-               />
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-gray-300 text-[#F97215] focus:ring-[#F97215] cursor-pointer"
+                checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                onChange={(e) => setSelectedIds(e.target.checked ? filtered.map(i => i.id) : [])}
+              />
             </div>
             <span></span>
             <span>Détails de l'incident</span><span>Emplacement</span><span>Priorité</span><span>Date limite</span><span>Statut</span><span className="text-right">Action</span>
@@ -144,8 +165,8 @@ export function IncidentManagement() {
                 >
                   {/* Checkbox */}
                   <div className="hidden md:flex w-6 pt-3 justify-center shrink-0 -ml-1">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="w-4 h-4 rounded border-gray-300 text-[#F97215] focus:ring-[#F97215] cursor-pointer"
                       checked={selectedIds.includes(inc.id)}
                       onClick={(e) => e.stopPropagation()}
@@ -156,7 +177,7 @@ export function IncidentManagement() {
                   </div>
                   {/* Thumb */}
                   <div className="hidden sm:block w-11 h-11 rounded-xl overflow-hidden border border-gray-200 shrink-0 mt-0.5">
-                    <ImageWithFallback src={inc.images[0]} alt={inc.title} className="w-full h-full object-cover"/>
+                    <ImageWithFallback src={inc.images[0]} alt={inc.title} className="w-full h-full object-cover" />
                   </div>
                   {/* Title col */}
                   <div className="flex-1 min-w-0 md:grid md:grid-cols-[1fr_1.5fr_1fr_1fr_1fr_auto] md:items-center md:gap-4">
@@ -166,7 +187,7 @@ export function IncidentManagement() {
                     </div>
                     <div className="text-gray-500 text-xs font-medium hidden md:block">{inc.location}</div>
                     <div className="hidden md:flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${P[inc.priority].dot}`}/>
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${P[inc.priority].dot}`} />
                       <span className="text-gray-600 text-xs font-semibold">{P[inc.priority].label}</span>
                     </div>
                     <div className="text-gray-500 text-xs hidden md:block">{inc.deadline}</div>
@@ -195,7 +216,7 @@ export function IncidentManagement() {
                       <div className="flex items-start justify-between gap-4 mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
-                            <FileText className="text-[#F97215]" size={22}/>
+                            <FileText className="text-[#F97215]" size={22} />
                           </div>
                           <div>
                             {/* Breadcrumb */}
@@ -216,10 +237,10 @@ export function IncidentManagement() {
                       {/* Meta */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {[
-                          { label: 'Création',      value: selected.createdDate },
+                          { label: 'Création', value: selected.createdDate },
                           { label: 'Dernière MAJ', value: selected.updatedDate },
-                          { label: 'Emplacement',     value: selected.location },
-                          { label: 'Date Limite',     value: selected.deadline },
+                          { label: 'Emplacement', value: selected.location },
+                          { label: 'Date Limite', value: selected.deadline },
                         ].map(m => (
                           <div key={m.label} className="bg-gray-50 rounded-xl p-3 border border-gray-200">
                             <div className="text-gray-500 text-[10px] font-bold uppercase tracking-wide mb-1">{m.label}</div>
@@ -230,16 +251,16 @@ export function IncidentManagement() {
                     </div>
 
                     {/* Description */}
-                    <Section title="Description de l'incident" icon={<FileText size={15}/>}>
+                    <Section title="Description de l'incident" icon={<FileText size={15} />}>
                       <p className="text-gray-600 text-sm leading-relaxed">{selected.description}</p>
                     </Section>
 
                     {/* Evidence */}
-                    <Section title={`Preuves et Images (${selected.images.length})`} icon={<ImageIcon size={15}/>}>
+                    <Section title={`Preuves et Images (${selected.images.length})`} icon={<ImageIcon size={15} />}>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {selected.images.map((img, i) => (
                           <div key={i} className="aspect-video rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                            <ImageWithFallback src={img} alt={`Preuve ${i+1}`} className="w-full h-full object-cover"/>
+                            <ImageWithFallback src={img} alt={`Preuve ${i + 1}`} className="w-full h-full object-cover" />
                           </div>
                         ))}
                       </div>
@@ -247,80 +268,89 @@ export function IncidentManagement() {
 
                     {/* Assignment + Location side by side */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <Section title="Assignation" icon={<User size={15}/>}>
+                      <Section title="Assignation" icon={<User size={15} />}>
                         <div className="space-y-4">
-                          <InfoRow label="Signalé par" value={<span>{selected.reporter}</span>}/>
+                          <InfoRow label="Signalé par" value={<span>{selected.reporter}</span>} />
                           <InfoRow label="Assigné à" value={
                             selected.assignedTo
                               ? <span className="flex items-center gap-2">
-                                  <Avatar color={selected.companyColor} initials={selected.assignedTo.charAt(0)}/>
-                                  {selected.assignedTo}
-                                </span>
+                                <Avatar color={getColorFromString(selected.assignedTo || '')} initials={getInitials(selected.assignedTo || '')} />
+                                {selected.assignedTo}
+                              </span>
                               : <span className="text-red-500 italic text-sm font-semibold">Non assigné</span>
-                          }/>
+                          } />
                           <InfoRow label="Entreprise" value={
                             <span className="flex items-center gap-2">
-                              <Avatar color={selected.companyColor} initials={selected.companyInitials}/>
+                              <Avatar color={getColorFromString(selected.company)} initials={getInitials(selected.company)} />
                               {selected.company}
                             </span>
-                          }/>
+                          } />
                         </div>
                         {!selected.assignedTo && (
-                          <button className="mt-4 w-full bg-[#F97215] hover:bg-[#ea660c] text-white py-2.5 rounded-xl text-sm font-bold transition shadow-sm flex items-center justify-center gap-2">
-                            <User size={14}/> Assigner un agent
+                          <button
+                            onClick={() => setIsAssignOpen(true)}
+                            className="mt-4 w-full bg-[#F97215] hover:bg-[#ea660c] text-white py-2.5 rounded-xl text-sm font-bold transition shadow-sm flex items-center justify-center gap-2"
+                          >
+                            <User size={14} /> Assigner un agent
                           </button>
                         )}
                       </Section>
 
-                      <Section title="Emplacement" icon={<MapPin size={15}/>}>
+                      <Section title="Emplacement" icon={<MapPin size={15} />}>
                         <div className="aspect-[4/3] bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center gap-2">
-                          <MapPin className="text-gray-300" size={36}/>
+                          <MapPin className="text-gray-300" size={36} />
                           <div className="text-gray-500 text-sm font-semibold text-center px-4">{selected.location}</div>
                           <button className="mt-1 px-5 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-50 shadow-sm flex items-center gap-1.5">
-                            <MapPin size={11}/> Voir sur le plan
+                            <MapPin size={11} /> Voir sur le plan
                           </button>
                         </div>
                       </Section>
                     </div>
 
                     {/* Actions */}
-                    <Section title="Actions rapides" icon={<ClipboardCheck size={15}/>}>
+                    <Section title="Actions rapides" icon={<ClipboardCheck size={15} />}>
                       <div className="flex flex-wrap gap-3">
                         {selected.status === 'open' && (
-                          <><Btn color="amber" icon={<Clock size={14}/>} label="Démarrer l'investigation"/>
-                          <Btn color="slate" icon={<User size={14}/>} label="Assigner un agent"/></>
+                          <><Btn color="amber" icon={<Clock size={14} />} label="Démarrer l'investigation" />
+                            <button onClick={() => setIsAssignOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-700">
+                              <User size={14} /> Assigner un agent
+                            </button></>
                         )}
                         {selected.status === 'in-progress' && (
-                          <><Btn color="emerald" icon={<CheckCircle size={14}/>} label="Marquer comme Résolu"/>
-                          <Btn color="slate" icon={<User size={14}/>} label="Réassigner"/></>
+                          <><Btn color="emerald" icon={<CheckCircle size={14} />} label="Marquer comme Résolu" />
+                            <button onClick={() => setIsAssignOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-700">
+                              <User size={14} /> Réassigner
+                            </button></>
                         )}
                         {(selected.status === 'open' || selected.status === 'in-progress') && new Date(selected.deadline) < new Date() && (
-                          <Btn color="red" icon={<Bell size={14}/>} label="Relancer l'entreprise (En retard)"/>
+                          <Btn color="red" icon={<Bell size={14} />} label="Relancer l'entreprise (En retard)" onClick={() => setIsReminderOpen(true)} />
                         )}
                         {selected.status === 'resolved' && (
-                          <Btn color="blue" icon={<FileText size={14}/>} label="Levée de la non-conformité"/>
+                          <Btn color="blue" icon={<FileText size={14} />} label="Levée de la non-conformité" onClick={() => setIsResolutionOpen(true)} />
                         )}
-                        <Btn color="slate" icon={<MessageSquare size={14}/>} label="Ajouter un commentaire"/>
-                        <Btn color="slate" icon={<Upload size={14}/>} label="Soumettre preuve de correction"/>
-                        <Btn color="slate" icon={<Download size={14}/>} label="Télécharger le rapport"/>
+                        <button onClick={() => setIsCommentOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm bg-white border border-gray-200 hover:bg-gray-50 text-gray-700">
+                          <MessageSquare size={14} /> Ajouter un commentaire
+                        </button>
+                        <Btn color="slate" icon={<Upload size={14} />} label="Soumettre preuve de correction" onClick={() => setIsUploadOpen(true)} />
+                        <Btn color="slate" icon={<Download size={14} />} label="Télécharger le rapport" />
                       </div>
                     </Section>
 
                     {/* Timeline */}
-                    <Section title="Chronologie" icon={<Calendar size={15}/>}>
+                    <Section title="Chronologie" icon={<Calendar size={15} />}>
                       <ol className="relative border-l-2 border-gray-200 ml-4 space-y-5">
-                        <TL color="bg-red-500" icon={<AlertTriangle size={12} className="text-white"/>} title="Incident Créé" date={selected.createdDate} note={`Signalé par ${selected.reporter}`}/>
+                        <TL color="bg-red-500" icon={<AlertTriangle size={12} className="text-white" />} title="Incident Créé" date={selected.createdDate} note={`Signalé par ${selected.reporter}`} />
                         {selected.assignedTo && (
-                          <TL color="bg-amber-500" icon={<User size={12} className="text-white"/>} title="Incident Assigné" date={selected.updatedDate} note={`Assigné à ${selected.assignedTo}`}/>
+                          <TL color="bg-amber-500" icon={<User size={12} className="text-white" />} title="Incident Assigné" date={selected.updatedDate} note={`Assigné à ${selected.assignedTo}`} />
                         )}
                         {selected.status === 'in-progress' && (
-                          <TL color="bg-blue-500" icon={<Clock size={12} className="text-white"/>} title="Investigation en cours" date={selected.updatedDate} note="Agent sur place pour investigation"/>
+                          <TL color="bg-blue-500" icon={<Clock size={12} className="text-white" />} title="Investigation en cours" date={selected.updatedDate} note="Agent sur place pour investigation" />
                         )}
                         {(selected.status === 'resolved' || selected.status === 'closed') && (
-                          <TL color="bg-emerald-500" icon={<CheckCircle size={12} className="text-white"/>} title="Incident Résolu" date={selected.updatedDate} note="Problème corrigé et vérifié"/>
+                          <TL color="bg-emerald-500" icon={<CheckCircle size={12} className="text-white" />} title="Incident Résolu" date={selected.updatedDate} note="Problème corrigé et vérifié" />
                         )}
                         {selected.status === 'closed' && (
-                          <TL color="bg-gray-400" icon={<FileText size={12} className="text-white"/>} title="Incident Fermé" date={selected.updatedDate} note="Dossier fermé, documentation complète"/>
+                          <TL color="bg-gray-400" icon={<FileText size={12} className="text-white" />} title="Incident Fermé" date={selected.updatedDate} note="Dossier fermé, documentation complète" />
                         )}
                       </ol>
                     </Section>
@@ -342,14 +372,16 @@ export function IncidentManagement() {
         </div>
       </div>
 
-      {/* ── Toast Notification ── */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-gray-900 border border-gray-800 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-bounce">
-          <CheckCircle size={18} className="text-emerald-400"/>
-          <p className="text-sm font-semibold">{toastMessage}</p>
-        </div>
-      )}
-
+      {/* ── Toast Notification Removed (Using Global) ── */}
+      <AssignAgentModal isOpen={isAssignOpen} onClose={() => setIsAssignOpen(false)} />
+      <AddCommentModal isOpen={isCommentOpen} onClose={() => setIsCommentOpen(false)} />
+      <UploadProofModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+      <ReminderModal isOpen={isReminderOpen} onClose={() => setIsReminderOpen(false)} />
+      <ResolutionModal isOpen={isResolutionOpen} onClose={() => setIsResolutionOpen(false)} />
+      
+      {/* Batch Modals */}
+      <ReminderModal isOpen={isBatchReminderOpen} onClose={() => { setIsBatchReminderOpen(false); setSelectedIds([]); }} />
+      <ResolutionModal isOpen={isBatchCloseOpen} onClose={() => { setIsBatchCloseOpen(false); setSelectedIds([]); }} />
     </div>
   );
 }
@@ -399,16 +431,20 @@ function Avatar({ color, initials }: { color: string; initials: string }) {
 }
 
 type BtnColor = 'amber' | 'emerald' | 'blue' | 'slate' | 'red';
-function Btn({ label, icon, color }: { label: string; icon: React.ReactNode; color: BtnColor }) {
+function Btn({ label, icon, color, onClick }: { label: string; icon: React.ReactNode; color: BtnColor; onClick?: () => void }) {
+  const { addToast } = useToast();
   const s: Record<BtnColor, string> = {
-    amber:   'bg-amber-500 hover:bg-amber-600 text-white',
+    amber: 'bg-amber-500 hover:bg-amber-600 text-white',
     emerald: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-    blue:    'bg-blue-500 hover:bg-blue-600 text-white',
-    red:     'bg-red-500 hover:bg-red-600 text-white',
-    slate:   'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700',
+    blue: 'bg-blue-500 hover:bg-blue-600 text-white',
+    red: 'bg-red-500 hover:bg-red-600 text-white',
+    slate: 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700',
   };
   return (
-    <button className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm ${s[color]}`}>
+    <button
+      onClick={onClick || (() => addToast(`Action simulée : ${label}`, 'info'))}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition shadow-sm ${s[color]}`}
+    >
       {icon}{label}
     </button>
   );

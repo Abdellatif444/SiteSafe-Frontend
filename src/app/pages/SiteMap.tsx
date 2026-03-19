@@ -16,6 +16,7 @@ import { Pencil, Trash2, Video, X, Layers, Save, Check, Undo2, LocateFixed, Aler
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { mockCameras } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -58,11 +59,12 @@ interface DrawnShape {
   points: [number, number][];
   name: string;
   zoneType?: string;
-  color?: string;
   hseRule?: string;
   linkedCameraId?: number;
   entreprise?: string;
   lot?: string;
+  createdBy?: string;
+  createdAt?: string;
 }
 
 const ZONE_TYPES = [
@@ -113,6 +115,7 @@ const MapClickHandler = ({
 };
 
 export function SiteMap() {
+  const { currentUser } = useAuth();
   const [drawMode, setDrawMode] = useState<DrawMode>(null);
   const [cameras, setCameras] = useState<DrawnCamera[]>([]);
   const [shapes, setShapes] = useState<DrawnShape[]>([]);
@@ -343,7 +346,7 @@ export function SiteMap() {
       // Edit mode: update existing shape
       setShapes(prev => prev.map(s =>
         s.id === editingShapeId
-          ? { ...s, name: zoneName.trim(), zoneType: chosen.value, color: chosen.color, hseRule: hseRule || undefined, linkedCameraId: camId }
+          ? { ...s, name: zoneName.trim(), zoneType: chosen.value, hseRule: hseRule || undefined, linkedCameraId: camId, createdBy: currentUser?.id, createdAt: new Date().toISOString() }
           : s
       ));
       // Re-center camera if re-linked
@@ -361,14 +364,15 @@ export function SiteMap() {
       setShapes(prev => [...prev, {
         id: `shape-${Date.now()}`,
         type: pendingShape.type,
-        points: pendingShape.points,
+        points: [...pendingShape.points],
         name: zoneName.trim(),
         zoneType: chosen.value,
-        color: chosen.color,
         hseRule: hseRule || undefined,
         linkedCameraId: camId,
         entreprise: zoneEntreprise.trim() || undefined,
         lot: zoneLot.trim() || undefined,
+        createdBy: currentUser?.id,
+        createdAt: new Date().toISOString()
       }]);
       setPendingShape(null);
     }
@@ -991,9 +995,9 @@ export function SiteMap() {
           <MapClickHandler drawMode={drawMode} onCameraAdd={handleAddCamera} />
 
           {/* React Shapes with dynamic zone colors */}
-          {shapes.map(shape => {
-            const col = shape.color ?? '#E84E1B';
-            if (shape.type === 'polygon') return (
+          {shapes.map((shape) => {
+            const col = ZONE_TYPES.find(zt => zt.value === shape.zoneType)?.color ?? '#E84E1B';
+            if (shape.type === 'polygon') {return (
               <Polygon key={shape.id} positions={shape.points} pathOptions={{ color: col, fillColor: col, fillOpacity: 0.18, weight: 2 }}>
                 <Tooltip sticky className="!bg-[#1a2235] !text-white !text-xs !rounded-lg !border-0 !shadow-xl">
                   <div className="font-bold">{shape.name}</div>
@@ -1009,7 +1013,7 @@ export function SiteMap() {
                   })()}
                 </Tooltip>
               </Polygon>
-            );
+            );}
             if (shape.type === 'line') return <Polyline key={shape.id} positions={shape.points} pathOptions={{ color: col, weight: 3 }} />;
             if (shape.type === 'point') return <CircleMarker key={shape.id} center={shape.points[0]} radius={6} pathOptions={{ color: col, fillColor: col, fillOpacity: 0.8 }} />;
             return null;

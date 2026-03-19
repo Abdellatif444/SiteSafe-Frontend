@@ -9,6 +9,10 @@ import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
 import { mockAlerts, AlertSeverity, AlertStatus, getCameraCoords } from '../data/mockData';
+import { useToast } from '../context/ToastContext';
+import { AssignAgentModal } from '../components/Modals';
+import { CreateIncidentModal } from '../components/CreateIncidentModal';
+import { FalsePositiveModal, GenericConfirmModal, VideoReplayModal } from '../components/AdvancedModals';
 
 export interface Alert {
   id: number;
@@ -52,6 +56,7 @@ const STAT: Record<AlertStatus, { label: string; bg: string; icon: React.ReactNo
 export function RealTimeAlerts() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const passedAlertId = location.state?.selectedAlertId as number | undefined;
   // Camera context: passed when coming from CameraMonitoring "Voir tout"
   const passedCamera = location.state?.camera as string | undefined;
@@ -72,6 +77,14 @@ export function RealTimeAlerts() {
   
   const [filterSeverity, setFilterSeverity] = useState<AlertSeverity | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<AlertStatus | 'all'>('all');
+
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [isFalsePositiveOpen, setIsFalsePositiveOpen] = useState(false);
+  const [isReplayOpen, setIsReplayOpen] = useState(false);
+  const [isConfirmReopen, setIsConfirmReopen] = useState(false);
+  const [isTakeChargeOpen, setIsTakeChargeOpen] = useState(false);
+  const [isCertifyOpen, setIsCertifyOpen] = useState(false);
+  const [isCreateIncidentOpen, setIsCreateIncidentOpen] = useState(false);
 
   // Si l'utilisateur clique sur une autre alerte depuis le dashboard
   useEffect(() => {
@@ -303,7 +316,10 @@ export function RealTimeAlerts() {
                               <h3 className="text-gray-800 font-bold text-sm flex items-center gap-2">
                                 <Video size={16} className="text-gray-400"/> Capture de l'incident
                               </h3>
-                              <button className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition">
+                              <button 
+                                onClick={() => setIsReplayOpen(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
+                              >
                                 <Eye size={13} /> Voir le flux en direct
                               </button>
                             </div>
@@ -333,37 +349,40 @@ export function RealTimeAlerts() {
                             <div className="flex flex-wrap gap-2">
                               {selectedAlert.status === 'active' && (
                                 <>
-                                  <button onClick={() => changeStatus(selectedAlert.id, 'in-progress')} className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-amber-200 transition flex items-center justify-center gap-2" title="Aller vérifier sur le terrain">
+                                  <button onClick={() => setIsTakeChargeOpen(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-amber-200 transition flex items-center justify-center gap-2" title="Aller vérifier sur le terrain">
                                     <Clock size={16} /> Prendre en charge
                                   </button>
-                                  <button onClick={() => changeStatus(selectedAlert.id, 'resolved')} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2" title="Zone vérifiée : la situation est conforme aux règles HSE">
+                                  <button onClick={() => setIsCertifyOpen(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2" title="Zone vérifiée : la situation est conforme aux règles HSE">
                                     <CheckCircle size={16} /> Certifier Zone Conforme
                                   </button>
-                                  <button onClick={() => { window.alert('Alerte écartée comme erreur IA.'); changeStatus(selectedAlert.id, 'resolved'); }} className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2" title="Indiquer que l'IA s'est trompée">
+                                  <button onClick={() => setIsFalsePositiveOpen(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2" title="Indiquer que l'IA s'est trompée">
                                     <X size={16} /> Faux Positif
                                   </button>
                                 </>
                               )}
                               {selectedAlert.status === 'in-progress' && (
-                                <button onClick={() => changeStatus(selectedAlert.id, 'resolved')} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2">
+                                <button onClick={() => setIsCertifyOpen(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-emerald-200 transition flex items-center justify-center gap-2">
                                   <CheckCircle size={16} /> Marquer comme résolue
                                 </button>
                               )}
                               
                               {(selectedAlert.status === 'active' || selectedAlert.status === 'in-progress') && (
-                                <button onClick={() => navigate('/incidents')} className="flex-1 sm:flex-none px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2" title="Transformer cette alerte en non-conformité officielle">
+                                <button onClick={() => setIsCreateIncidentOpen(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold shadow-sm transition flex items-center justify-center gap-2" title="Transformer cette alerte en non-conformité officielle">
                                   <ShieldAlert size={16} /> Créer Incident
                                 </button>
                               )}
 
                               {(selectedAlert.status === 'in-progress' || selectedAlert.status === 'active') && (
-                                <button className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => setIsAssignOpen(true)}
+                                  className="flex-1 sm:flex-none px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                                >
                                   <User size={16} /> Assigner
                                 </button>
                               )}
                               
                               {selectedAlert.status === 'resolved' && (
-                                <button onClick={() => changeStatus(selectedAlert.id, 'active')} className="ml-auto flex sm:flex-none items-center justify-center px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-xl text-sm font-bold transition gap-2">
+                                <button onClick={() => setIsConfirmReopen(true)} className="ml-auto flex sm:flex-none items-center justify-center px-4 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-xl text-sm font-bold transition gap-2">
                                   <RefreshCw size={16} /> Rouvrir l'alerte
                                 </button>
                               )}
@@ -463,6 +482,41 @@ export function RealTimeAlerts() {
           </div>
         </div>
       </div>
+
+      <AssignAgentModal isOpen={isAssignOpen} onClose={() => setIsAssignOpen(false)} />
+      <FalsePositiveModal isOpen={isFalsePositiveOpen} onClose={() => setIsFalsePositiveOpen(false)} />
+      <VideoReplayModal isOpen={isReplayOpen} onClose={() => setIsReplayOpen(false)} timestamp={selectedAlert?.timestamp} />
+      <GenericConfirmModal
+          isOpen={isConfirmReopen}
+          onClose={() => setIsConfirmReopen(false)}
+          title="Rouvrir l'alerte"
+          subtitle="Cette action déplacera l'alerte vers les dossiers actifs."
+          description="Êtes-vous sûr de vouloir considérer que cet incident n'est pas résolu ?"
+          actionLabel="Rouvrir l'Alerte"
+          actionColor="red"
+          onConfirm={() => { changeStatus(selectedAlert!.id, 'active'); addToast("Alerte rouverte.", "success"); }}
+      />
+      <CreateIncidentModal isOpen={isCreateIncidentOpen} onClose={() => setIsCreateIncidentOpen(false)} />
+      <GenericConfirmModal
+        isOpen={isTakeChargeOpen}
+        onClose={() => setIsTakeChargeOpen(false)}
+        title="Prendre en charge l'Alerte"
+        subtitle={`Alerte: ${selectedAlert?.type}`}
+        description="Confirmez-vous la prise en charge de cette alerte pour inspection physique sur le terrain ?"
+        actionLabel="Confirmer la prise en charge"
+        actionColor="amber"
+        onConfirm={() => { changeStatus(selectedAlert!.id, 'in-progress'); addToast("Alerte prise en charge.", "success"); }}
+      />
+      <GenericConfirmModal
+        isOpen={isCertifyOpen}
+        onClose={() => setIsCertifyOpen(false)}
+        title="Certifier Zone Conforme"
+        subtitle={`Alerte: ${selectedAlert?.type}`}
+        description="Vous êtes sur le point de marquer cette alerte comme résolue (situation corrigée). Êtes-vous sûr ?"
+        actionLabel="Certifier Conforme"
+        actionColor="emerald"
+        onConfirm={() => { changeStatus(selectedAlert!.id, 'resolved'); addToast("Zone certifiée conforme.", "success"); }}
+      />
     </div>
   );
 }

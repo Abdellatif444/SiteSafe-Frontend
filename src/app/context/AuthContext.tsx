@@ -8,15 +8,17 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
-  roleLabel: string;
+  companyId: string;
+  isActive: boolean;
+  lastLogin: string;
 }
 
 export const MOCK_USERS: User[] = [
-  { id: '1', role: 'hse_inspector', name: 'Alex Johnson', email: 'alex.j@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=alex', roleLabel: 'Inspecteur HSE' },
-  { id: '2', role: 'site_director', name: 'Marie Dubois', email: 'marie.d@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=marie', roleLabel: 'Directrice de Chantier' },
-  { id: '3', role: 'site_manager', name: 'Paul Bernard', email: 'paul.b@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=paul', roleLabel: 'Chef de Chantier' },
-  { id: '4', role: 'auditor', name: 'Sophie Martin', email: 'sophie.m@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=sophie', roleLabel: 'Auditeur Externe' },
-  { id: '5', role: 'admin', name: 'Admin Système', email: 'admin@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=admin', roleLabel: 'Administrateur' },
+  { id: '1', role: 'hse_inspector', name: 'Alex Johnson', email: 'alex.j@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=alex', companyId: 'COMP-1', isActive: true, lastLogin: new Date().toISOString() },
+  { id: '2', role: 'site_director', name: 'Marie Dubois', email: 'marie.d@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=marie', companyId: 'COMP-1', isActive: true, lastLogin: new Date().toISOString() },
+  { id: '3', role: 'site_manager', name: 'Paul Bernard', email: 'paul.b@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=paul', companyId: 'COMP-2', isActive: true, lastLogin: new Date().toISOString() },
+  { id: '4', role: 'auditor', name: 'Sophie Martin', email: 'sophie.m@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=sophie', companyId: 'EXT-AUDIT', isActive: true, lastLogin: new Date().toISOString() },
+  { id: '5', role: 'admin', name: 'Admin Système', email: 'admin@sitesafe.local', avatar: 'https://i.pravatar.cc/150?u=admin', companyId: 'COMP-1', isActive: true, lastLogin: new Date().toISOString() },
 ];
 
 interface AuthContextType {

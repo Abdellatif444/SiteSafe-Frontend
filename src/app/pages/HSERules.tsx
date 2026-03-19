@@ -7,19 +7,23 @@ import {
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
 type RuleType = "ppe" | "distance" | "zone_access" | "speed_limit";
+type RuleSeverity = "critical" | "high" | "medium" | "low";
 
 type Rule = {
   id: number;
   name: string;
+  description: string;
   type: RuleType;
+  severity: RuleSeverity;
+  isActive: boolean;
   zones: string[];
 };
 
 const initialRules: Rule[] = [
-  { id: 1, name: "Casque Obligatoire", type: "ppe", zones: ["Zone A", "Zone B"] },
-  { id: 2, name: "Distance Machines", type: "distance", zones: ["Zone C"] },
-  { id: 3, name: "Accès Restreint", type: "zone_access", zones: ["Zone D - Risque Élevé"] },
-  { id: 4, name: "Limites de Vitesse (15km/h)", type: "speed_limit", zones: ["Toutes les routes du site"] },
+  { id: 1, name: "Casque Obligatoire", description: "Le port du casque de protection standard est strictement exigé pour toute personne entrant dans les zones de construction.", type: "ppe", severity: "high", isActive: true, zones: ["Zone A", "Zone B"] },
+  { id: 2, name: "Distance Machines", description: "Maintien d'un périmètre de sécurité autour des engins lourds en mouvement.", type: "distance", severity: "critical", isActive: true, zones: ["Zone C"] },
+  { id: 3, name: "Accès Restreint", description: "Interdiction de pénétrer sans habilitation de sécurité.", type: "zone_access", severity: "critical", isActive: true, zones: ["Zone D - Risque Élevé"] },
+  { id: 4, name: "Limites de Vitesse (15km/h)", description: "Vitesse maximale autorisée pour prévenir les collisions.", type: "speed_limit", severity: "medium", isActive: false, zones: ["Toutes les routes du site"] },
 ];
 
 const RT = {
@@ -41,12 +45,17 @@ export function HSERules() {
   // Rule Form (Add)
   const [showRuleForm, setShowRuleForm] = useState(false);
   const [newRuleName, setNewRuleName] = useState("");
+  const [newRuleDescription, setNewRuleDescription] = useState("");
   const [newRuleType, setNewRuleType] = useState<RuleType>("ppe");
+  const [newRuleSeverity, setNewRuleSeverity] = useState<RuleSeverity>("high");
 
   // Rule Edit
   const [editingRuleId, setEditingRuleId] = useState<number | null>(null);
   const [editingRuleName, setEditingRuleName] = useState("");
+  const [editingRuleDescription, setEditingRuleDescription] = useState("");
   const [editingRuleType, setEditingRuleType] = useState<RuleType>("ppe");
+  const [editingRuleSeverity, setEditingRuleSeverity] = useState<RuleSeverity>("high");
+  const [editingRuleIsActive, setEditingRuleIsActive] = useState<boolean>(true);
 
   // Zone Form (Add)
   const [newZone, setNewZone] = useState("");
@@ -67,10 +76,12 @@ export function HSERules() {
   function addRule(e: React.FormEvent) {
     e.preventDefault();
     if (!newRuleName.trim()) return;
-    const rule: Rule = { id: Date.now(), name: newRuleName, type: newRuleType, zones: [] };
+    const rule: Rule = { id: Date.now(), name: newRuleName, description: newRuleDescription, type: newRuleType, severity: newRuleSeverity, isActive: true, zones: [] };
     setRules([rule, ...rules]);
     setSelectedId(rule.id);
     setNewRuleName("");
+    setNewRuleDescription("");
+    setNewRuleSeverity("high");
     setShowRuleForm(false);
   }
 
@@ -84,13 +95,16 @@ export function HSERules() {
     e.stopPropagation();
     setEditingRuleId(rule.id);
     setEditingRuleName(rule.name);
+    setEditingRuleDescription(rule.description);
     setEditingRuleType(rule.type);
+    setEditingRuleSeverity(rule.severity);
+    setEditingRuleIsActive(rule.isActive);
   }
 
   function saveEditRule(e: React.FormEvent) {
     e.preventDefault();
     const updated = rules.map(rule =>
-      rule.id === editingRuleId ? { ...rule, name: editingRuleName, type: editingRuleType } : rule
+      rule.id === editingRuleId ? { ...rule, name: editingRuleName, description: editingRuleDescription, type: editingRuleType, severity: editingRuleSeverity, isActive: editingRuleIsActive } : rule
     );
     setRules(updated);
     setEditingRuleId(null);
@@ -244,8 +258,15 @@ export function HSERules() {
                         <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${RT[selectedRule.type].bg} ${RT[selectedRule.type].color}`}>
                           Type {RT[selectedRule.type].label}
                         </span>
-                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200">
-                          Règle Active
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border 
+                          ${selectedRule.severity === 'critical' ? 'text-red-700 bg-red-100 border-red-300' : 
+                            selectedRule.severity === 'high' ? 'text-orange-700 bg-orange-100 border-orange-300' : 
+                            selectedRule.severity === 'medium' ? 'text-amber-700 bg-amber-100 border-amber-300' : 
+                            'text-slate-700 bg-slate-100 border-slate-300'}`}>
+                          Sévérité: {selectedRule.severity}
+                        </span>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${selectedRule.isActive ? 'text-emerald-600 bg-emerald-50 border border-emerald-200' : 'text-gray-500 bg-gray-100 border border-gray-200'}`}>
+                          {selectedRule.isActive ? 'Règle Active' : 'Interrompue'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -260,8 +281,11 @@ export function HSERules() {
                     <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight mb-2">
                       {selectedRule.name}
                     </h2>
-                    <p className="text-gray-500 text-sm font-medium">
-                      Cette règle dicte les paramètres d'application de l'IA. Assurez-vous que les zones ci-dessous reflètent les contraintes physiques du site pour maintenir un suivi précis des anomalies par drone et caméra.
+                    <p className="text-gray-500 text-sm font-medium mb-3">
+                      {selectedRule.description}
+                    </p>
+                    <p className="text-gray-400 text-xs font-semibold bg-gray-50 border border-gray-100 p-2.5 rounded-lg inline-block">
+                      <span className="text-[#F97215]">Info IA:</span> Cette règle dicte les paramètres d'application. Mettez les zones à jour pour refléter les contraintes physiques du site.
                     </p>
                   </div>
                 </div>
@@ -356,14 +380,31 @@ export function HSERules() {
                   className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"/>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type d'Application</label>
-                <select value={newRuleType} onChange={e => setNewRuleType(e.target.value as RuleType)}
-                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all">
-                  <option value="ppe">Équipement de Protection Individuelle (EPI)</option>
-                  <option value="distance">Proximité des Machines Obligatoire</option>
-                  <option value="zone_access">Accès à une Zone Restreinte</option>
-                  <option value="speed_limit">Limite de Vitesse des Véhicules</option>
-                </select>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Description de la règle</label>
+                <textarea rows={2} required value={newRuleDescription} onChange={e => setNewRuleDescription(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type/Famille</label>
+                  <select value={newRuleType} onChange={e => setNewRuleType(e.target.value as RuleType)}
+                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all">
+                    <option value="ppe">E.P.I.</option>
+                    <option value="distance">Distance Machines</option>
+                    <option value="zone_access">Accès Restreint</option>
+                    <option value="speed_limit">Vitesse</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Sévérité (Défaut)</label>
+                  <select value={newRuleSeverity} onChange={e => setNewRuleSeverity(e.target.value as RuleSeverity)}
+                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all">
+                    <option value="critical">Critique</option>
+                    <option value="high">Haute</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="low">Faible</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
@@ -402,14 +443,35 @@ export function HSERules() {
                   className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type d'Application</label>
-                <select value={editingRuleType} onChange={e => setEditingRuleType(e.target.value as RuleType)}
-                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
-                  <option value="ppe">Équipement de Protection Individuelle (EPI)</option>
-                  <option value="distance">Proximité des Machines Obligatoire</option>
-                  <option value="zone_access">Accès à une Zone Restreinte</option>
-                  <option value="speed_limit">Limite de Vitesse des Véhicules</option>
-                </select>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Description de la règle</label>
+                <textarea rows={2} required value={editingRuleDescription} onChange={e => setEditingRuleDescription(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Type/Famille</label>
+                  <select value={editingRuleType} onChange={e => setEditingRuleType(e.target.value as RuleType)}
+                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="ppe">E.P.I.</option>
+                    <option value="distance">Distance Machines</option>
+                    <option value="zone_access">Accès Restreint</option>
+                    <option value="speed_limit">Vitesse</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Sévérité</label>
+                  <select value={editingRuleSeverity} onChange={e => setEditingRuleSeverity(e.target.value as RuleSeverity)}
+                    className="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                    <option value="critical">Critique</option>
+                    <option value="high">Haute</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="low">Faible</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mt-4 mb-2 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                <input type="checkbox" id="isActive" checked={editingRuleIsActive} onChange={e => setEditingRuleIsActive(e.target.checked)} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"/>
+                <label htmlFor="isActive" className="text-sm font-bold text-gray-700">Règle actuellement active (surveillance ON)</label>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">

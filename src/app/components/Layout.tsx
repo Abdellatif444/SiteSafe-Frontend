@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { Outlet, Link, useLocation } from 'react-router';
 import {
   LayoutDashboard,
   Map,
@@ -14,12 +14,23 @@ import {
   X,
   Search,
   Bell,
-  Plus,
-  CloudOff
+  CloudOff,
+  Plus
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth, Role, MOCK_USERS } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
+const ROLE_LABELS: Record<string, string> = {
+  'admin': 'Administrateur',
+  'hse_inspector': 'Inspecteur HSE',
+  'site_director': 'Directrice de Chantier',
+  'site_manager': 'Chef de Chantier',
+  'auditor': 'Auditeur Externe'
+};
+
+import { CreateIncidentModal } from './CreateIncidentModal';
+import { CreateReportModal } from './Modals';
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: 'Tableau de bord' },
   { path: '/map', icon: Map, label: 'Plan du site' },
@@ -43,10 +54,12 @@ const rolePermissions: Record<Role, string[]> = {
 
 export function Layout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [isCreateIncidentOpen, setIsCreateIncidentOpen] = useState(false);
+  const [isCreateReportOpen, setIsCreateReportOpen] = useState(false);
   const { currentUser, switchUser } = useAuth();
+  const { addToast } = useToast();
   
   const allowedNavItems = navItems.filter(item => rolePermissions[currentUser.role]?.includes(item.path));
 
@@ -129,7 +142,7 @@ export function Layout() {
                       <div className={`text-[13px] font-medium truncate ${currentUser.id === user.id ? 'text-[#F97215]' : 'text-white'}`}>
                         {user.name}
                       </div>
-                      <div className="text-[11px] text-[#A3ABB0] truncate">{user.roleLabel}</div>
+                      <div className="text-[11px] text-[#A3ABB0] truncate">{ROLE_LABELS[user.role] || user.role}</div>
                     </div>
                   </button>
                 ))}
@@ -149,8 +162,8 @@ export function Layout() {
               className="w-10 h-10 rounded-full object-cover shrink-0 border-2 border-[#2d3b55]"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-[#A3ABB0] text-[14px] font-medium leading-none mb-1 truncate">{currentUser.name}</p>
-              <p className="text-[#596976] text-[12px] leading-none truncate">{currentUser.roleLabel}</p>
+              <div className="font-bold text-[#2A343D] leading-tight">{currentUser.name}</div>
+              <p className="text-[#596976] text-[12px] leading-none truncate">{ROLE_LABELS[currentUser.role] || currentUser.role}</p>
             </div>
             <div className={`text-[#3d4f5e] transition-transform duration-200 shrink-0 ${roleMenuOpen ? 'rotate-180 text-[#F97215]' : ''}`}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -190,6 +203,12 @@ export function Layout() {
               <input 
                 type="text" 
                 placeholder="Rechercher..." 
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                    addToast(`Recherche pour "${e.currentTarget.value}" (Simulation)`, 'info');
+                    e.currentTarget.value = '';
+                  }
+                }}
                 className="pl-10 pr-4 py-2 w-[280px] bg-slate-50 border border-slate-200/60 rounded-lg text-[14px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-site-orange/40 focus:border-site-orange transition-all"
               />
             </div>
@@ -205,6 +224,7 @@ export function Layout() {
 
             <button 
               aria-label="Notifications"
+              onClick={() => addToast("Vous n'avez aucune notification critique en attente.", 'info')}
               className="relative text-slate-400 hover:text-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none p-1 rounded-md group"
             >
               <Bell size={20} className="group-hover:animate-bounce" />
@@ -212,16 +232,16 @@ export function Layout() {
             </button>
 
             <button 
-              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[14px] font-medium hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-colors"
-              title="Créer et configurer un rapport d'inspection formel (avec plage de dates, zones, type)"
-              onClick={() => alert("Ouverture du formulaire de création d'un rapport d'inspection complet. (Simulation)")}
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-[14px] font-medium hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-site-orange focus-visible:outline-none transition-colors shadow-sm"
+              title="Créer et configurer un rapport d'inspection formel"
+              onClick={() => setIsCreateReportOpen(true)}
             >
               <FileText size={15} />
               Créer Rapport d&apos;Inspection
             </button>
 
             <button 
-              onClick={() => navigate('/incidents')}
+              onClick={() => setIsCreateIncidentOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-[#F97215] text-white rounded-lg text-[14px] font-medium hover:bg-[#ea660c] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-site-orange focus-visible:outline-none transition-all shadow-sm"
             >
               <Plus size={16} /> <span className="hidden sm:inline">Nouvel Incident</span>
@@ -234,6 +254,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      <CreateIncidentModal isOpen={isCreateIncidentOpen} onClose={() => setIsCreateIncidentOpen(false)} />
+      <CreateReportModal isOpen={isCreateReportOpen} onClose={() => setIsCreateReportOpen(false)} />
     </div>
   );
 }

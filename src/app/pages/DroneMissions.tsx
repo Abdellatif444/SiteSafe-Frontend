@@ -5,6 +5,10 @@ import {
   Route, FileText, Video, Edit2, RotateCw, BatteryLow
 } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
+import { useToast } from '../context/ToastContext';
+import { CreateIncidentModal } from '../components/CreateIncidentModal';
+import { CreateReportModal } from '../components/Modals';
+import { GenericConfirmModal } from '../components/AdvancedModals';
 
 // ─── Types & Data ─────────────────────────────────────────────────────────────
 
@@ -34,7 +38,13 @@ export function DroneMissions() {
   const [detailOpen, setDetailOpen] = useState(false);
   
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ zone: '', date: '', time: '', drone: '', duration: '' });
+  const [formData, setFormData] = useState({ zone: '', date: '', time: '', drone: '', duration: '', flightPath: '' });
+
+  const { addToast } = useToast();
+  const [isIncidentOpen, setIsIncidentOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isConfirmStartOpen, setIsConfirmStartOpen] = useState(false);
+  const [isConfirmRestartOpen, setIsConfirmRestartOpen] = useState(false);
 
   const handleCreateMission = (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +52,13 @@ export function DroneMissions() {
       id: missionsList.length + 1,
       name: 'Nouvelle Mission Drone',
       zone: formData.zone, date: formData.date, time: formData.time, duration: formData.duration, drone: formData.drone,
-      status: 'scheduled', images: 0, anomalies: 0, flightPath: '',
+      status: 'scheduled', images: 0, anomalies: 0, flightPath: formData.flightPath,
     };
     const updatedList = [newMission, ...missionsList];
     setMissionsList(updatedList);
     setSelected(newMission);
     setDetailOpen(true);
-    setFormData({ zone: '', date: '', time: '', drone: '', duration: '' });
+    setFormData({ zone: '', date: '', time: '', drone: '', duration: '', flightPath: '' });
     setShowForm(false);
   };
 
@@ -157,22 +167,22 @@ export function DroneMissions() {
                           </div>
                         </div>
                         {selected.status === 'completed' && (
-                          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Vérifier le document certifié de fin d'inspection">
+                          <button onClick={() => setIsReportOpen(true)} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Vérifier le document certifié de fin d'inspection">
                             <FileText size={15}/> Rapport de Mission
                           </button>
                         )}
                         {selected.status === 'scheduled' && (
                           <div className="hidden sm:flex items-center gap-2">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Modifier la planification de la mission">
+                            <button onClick={() => setShowForm(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Modifier la planification de la mission">
                               <Edit2 size={15}/> Modifier
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-[#F97215] text-white hover:bg-[#ea660c] border border-transparent rounded-xl text-sm font-bold transition shadow-md shadow-orange-100" title="Forcer le décollage immédiat du drone">
+                            <button onClick={() => setIsConfirmStartOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-[#F97215] text-white hover:bg-[#ea660c] border border-transparent rounded-xl text-sm font-bold transition shadow-md shadow-orange-100" title="Forcer le décollage immédiat du drone">
                               <Play size={15}/> Démarrer
                             </button>
                           </div>
                         )}
                         {selected.status === 'cancelled' && (
-                          <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Reprogrammer cette mission">
+                          <button onClick={() => setIsConfirmRestartOpen(true)} className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-semibold transition shadow-sm" title="Reprogrammer cette mission">
                             <RotateCw size={15}/> Relancer Mission
                           </button>
                         )}
@@ -262,7 +272,7 @@ export function DroneMissions() {
                                   <div className="flex items-center gap-2 text-xs text-gray-500 font-medium"><MapPin size={13} className="text-gray-400"/> {anomaly.location}</div>
                                   <div className="flex items-center gap-2 text-xs text-gray-500 font-medium"><Clock size={13} className="text-gray-400"/> {anomaly.timestamp}</div>
                                 </div>
-                                <button className="mt-auto w-full pt-2 pb-2 text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm group/btn" title="Valider l'anomalie IA et générer un ticket d'incident formel">
+                                <button onClick={() => setIsIncidentOpen(true)} className="mt-auto w-full pt-2 pb-2 text-xs font-bold text-red-600 bg-white hover:bg-red-50 border border-red-100 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm group/btn" title="Valider l'anomalie IA et générer un ticket d'incident formel">
                                   <AlertTriangle size={13} className="group-hover/btn:scale-110 transition-transform"/> Valider et Créer Incident
                                 </button>
                               </div>
@@ -340,6 +350,12 @@ export function DroneMissions() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Notes sur la trajectoire</label>
+                <textarea rows={2} placeholder="Précisez le périmètre et les points d'attention..." required value={formData.flightPath} onChange={e => setFormData({ ...formData, flightPath: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"/>
+              </div>
+
               <div className="flex gap-3 pt-4 border-t border-gray-100 mt-2">
                 <button type="button" onClick={() => setShowForm(false)}
                   className="flex-1 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition">
@@ -354,6 +370,32 @@ export function DroneMissions() {
           </div>
         </div>
       )}
+
+      {/* ── Modals ── */}
+      <CreateIncidentModal isOpen={isIncidentOpen} onClose={() => setIsIncidentOpen(false)} />
+      <CreateReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
+      
+      <GenericConfirmModal
+        isOpen={isConfirmStartOpen}
+        onClose={() => setIsConfirmStartOpen(false)}
+        title="Démarrer le Décollage"
+        subtitle="Forcer la mission immédiate"
+        description="Êtes-vous sûr de vouloir forcer le décollage immédiat de ce drone en ignorant sa planification initiale ?"
+        actionLabel="Démarrer le Drone"
+        actionColor="emerald"
+        onConfirm={() => addToast("Décollage initié avec succès. (Simulation)", "success")}
+      />
+
+      <GenericConfirmModal
+        isOpen={isConfirmRestartOpen}
+        onClose={() => setIsConfirmRestartOpen(false)}
+        title="Relancer la Mission"
+        subtitle="Reprogrammer cette inspection"
+        description="Vous êtes sur le point de nettoyer le statut de cette mission annulée pour la replanifier dans les vols à venir."
+        actionLabel="Relancer la Mission"
+        actionColor="blue"
+        onConfirm={() => addToast("Mission reprogrammée et remise en file d'attente. (Simulation)", "success")}
+      />
     </div>
   );
 }

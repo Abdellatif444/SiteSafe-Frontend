@@ -1,5 +1,7 @@
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingDown, TrendingUp, Calendar, Download, Filter, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { CreateReportModal } from '../components/Modals';
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,8 @@ const complianceOverTime = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SafetyReports() {
+  const [isReportOpen, setIsReportOpen] = useState(false);
+
   return (
     <div className="bg-[#F4F7FC] font-sans min-h-full">
       <div className="bg-white border-b border-gray-200 px-8 py-5 shadow-sm sticky top-0 z-10">
@@ -59,7 +63,7 @@ export function SafetyReports() {
             </button>
             <button 
               className="flex items-center gap-2 px-5 py-2.5 bg-[#F97215] text-white rounded-xl text-sm font-bold hover:bg-[#ea660c] transition shadow-md shadow-orange-200"
-              onClick={() => alert("Génération du registre HSE officiel (Format PDF/Excel) conforme à l'inspection du travail en cours de téléchargement...")}
+              onClick={() => setIsReportOpen(true)}
               title="Télécharger le registre officiel pour la commission HSE"
             >
               <Download size={16} /> Exporter Registre (PDF)
@@ -320,6 +324,8 @@ export function SafetyReports() {
         </div>
 
       </div>
+      
+      <CreateReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
     </div>
   );
 }
