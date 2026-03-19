@@ -74,12 +74,12 @@ export function CameraMonitoring() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const passedCameraId = location.state?.selectedCameraId as number | undefined;
+  const passedCameraId = location.state?.selectedCameraId as string | undefined;
 
   const [selectedCamera, setSelectedCamera] = useState(() => {
     return cameraList.find(c => c.id === passedCameraId) || cameraList[0];
   });
-  const [clearedAlerts, setClearedAlerts] = useState<number[]>([]);
+  const [clearedAlerts, setClearedAlerts] = useState<string[]>([]);
 
   // Confirmation modal — tracks which type of violation triggered it
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -588,12 +588,8 @@ export function CameraMonitoring() {
               <div className="flex items-center gap-2">
                 <MapPin size={14} className="text-gray-400" />
                 <span className="text-gray-600 text-sm font-medium flex items-center gap-1.5">
-                  Orientation : <b className="text-gray-800">{selectedCamera.orientation}</b>
-                  {(() => {
-                    const match = selectedCamera.orientation.match(/(\d+)°/);
-                    const deg = match ? match[1] : 0;
-                    return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500" style={{ transform: `rotate(${deg}deg)` }}><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>;
-                  })()}
+                  Orientation : <b className="text-gray-800">{selectedCamera.orientation ?? 0}°</b>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500" style={{ transform: `rotate(${selectedCamera.orientation ?? 0}deg)` }}><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -803,7 +799,7 @@ export function CameraMonitoring() {
                 <div className="space-y-3">
                   {[
                     { label: 'Emplacement', value: selectedCamera.location },
-                    { label: 'Orientation', value: selectedCamera.orientation },
+                    { label: 'Orientation', value: selectedCamera.orientation !== undefined ? `${selectedCamera.orientation}°` : 'Non définie' },
                     { label: 'IPS', value: `${selectedCamera.fps} IPS` },
                     { label: 'Statut', value: selectedCamera.status === 'active' ? '● Actif & Enregistrement' : '⚙ En Maintenance' },
                   ].map(item => (
