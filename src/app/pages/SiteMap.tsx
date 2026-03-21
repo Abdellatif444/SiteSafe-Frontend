@@ -60,7 +60,7 @@ interface DrawnShape {
   name: string;
   zoneType?: string;
   hseRule?: string;
-  linkedCameraId?: number;
+  linkedCameraId?: string;
   entreprise?: string;
   lot?: string;
   createdBy?: string;
@@ -122,13 +122,13 @@ export function SiteMap() {
   const [mapStyle, setMapStyle] = useState<'osm' | 'satellite'>('osm');
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [cameraPositions, setCameraPositions] = useState<Record<number, [number, number]>>(
+  const [cameraPositions, setCameraPositions] = useState<Record<string, [number, number]>>(
     () => Object.fromEntries(mockCameras.map(c => [c.id, c.coords]))
   );
-  const [cameraOrientations, setCameraOrientations] = useState<Record<number, number>>(
+  const [cameraOrientations, setCameraOrientations] = useState<Record<string, number>>(
     () => Object.fromEntries(mockCameras.map(c => [c.id, 45]))
   );
-  const [draggingCamId, setDraggingCamId] = useState<number | null>(null);
+  const [draggingCamId, setDraggingCamId] = useState<string | null>(null);
   // Zone qualification modal
   const [pendingShape, setPendingShape] = useState<PendingShape | null>(null);
   const [editingShapeId, setEditingShapeId] = useState<string | null>(null); // null = create, string = edit
@@ -340,7 +340,7 @@ export function SiteMap() {
     // Validate: name is required
     if (!zoneName.trim()) { setZoneNameError(true); return; }
     const chosen = ZONE_TYPES.find(z => z.value === zoneType) ?? ZONE_TYPES[0];
-    const camId = linkedCamera ? parseInt(linkedCamera) : undefined;
+    const camId = linkedCamera ? linkedCamera : undefined;
 
     if (editingShapeId) {
       // Edit mode: update existing shape
@@ -388,7 +388,7 @@ export function SiteMap() {
     setZoneName(shape.name);
     setZoneType(shape.zoneType ?? ZONE_TYPES[0].value);
     setHseRule(shape.hseRule ?? '');
-    setLinkedCamera(shape.linkedCameraId ? String(shape.linkedCameraId) : '');
+    setLinkedCamera(shape.linkedCameraId || '');
     setZoneEntreprise(shape.entreprise ?? '');
     setZoneLot(shape.lot ?? '');
     setZoneNameError(false);
@@ -581,7 +581,7 @@ export function SiteMap() {
                     {linkedCamera ? (
                       <>
                         {(() => {
-                          const cam = mockCameras.find(c => c.id === parseInt(linkedCamera));
+                          const cam = mockCameras.find(c => c.id === linkedCamera);
                           const isMaint = cam?.status === 'maintenance';
                           return (
                             <>
@@ -638,7 +638,7 @@ export function SiteMap() {
                   </>
                 )}
 
-                {linkedCamera && mockCameras.find(c => c.id === parseInt(linkedCamera))?.status === 'maintenance' && (
+                {linkedCamera && mockCameras.find(c => c.id === linkedCamera)?.status === 'maintenance' && (
                   <p className="text-amber-500 font-medium text-xs mt-2 flex items-center gap-1.5">⚠ Cette caméra est en maintenance — couverture partielle</p>
                 )}
               </div>
