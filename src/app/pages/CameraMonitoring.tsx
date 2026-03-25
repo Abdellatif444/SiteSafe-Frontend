@@ -163,20 +163,11 @@ function NonConformiteModal({
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
           <div>
-            <span className="inline-flex items-center gap-1.5 bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-full mb-2">
-              <Circle
-                size={6}
-                className="fill-red-500 text-red-500 animate-pulse"
-              />
-              Non-conformité détectée
-            </span>
+            
             <h3 className="font-bold text-gray-800 text-base">
               Examen de la violation HSE
             </h3>
-            <p className="text-gray-500 text-xs mt-0.5">
-              {camera.name} — {camera.location}&nbsp;·&nbsp;
-              <span className="text-orange-500 font-semibold">Segment 10s</span>
-            </p>
+            
           </div>
           <button
             onClick={onClose}
@@ -294,7 +285,7 @@ function NonConformiteModal({
             onClick={() => onValidate(comment)}
             className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow-sm"
           >
-            <CheckCircle size={15} /> Valider la non-conformité
+            <CheckCircle size={15} /> Valider 
           </button>
           <button
             onClick={() => onReject(comment)}
@@ -773,16 +764,6 @@ export function CameraMonitoring() {
                   <AlertTriangle size={15} /> Non-conformités
                 </button>
               )}
-              <button
-                className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl text-sm font-bold transition shadow-sm group"
-                title="Agrandir et centrer le flux vidéo"
-              >
-                <Maximize
-                  size={16}
-                  className="group-hover:scale-110 transition-transform"
-                />{" "}
-                <span className="hidden sm:inline">Plein écran</span>
-              </button>
             </div>
           </div>
 
