@@ -12,7 +12,7 @@ import {
   CircleMarker
 } from "react-leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Pencil, Trash2, Video, X, Layers, Save, Check, Undo2, LocateFixed, AlertCircle, MapPin, HardHat, Shirt, ShieldCheck, Ban, Link2, Truck, Shield, ChevronDown, RotateCcw, Settings, Eye } from "lucide-react";
+import { Pencil, Trash2, Video, X, Layers, Save, Check, Undo2, LocateFixed, AlertCircle, MapPin, HardHat, Shirt, ShieldCheck, Ban, Link2, Truck, Shield, ChevronDown, Settings } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { mockCameras } from '../data/mockData';
@@ -125,9 +125,7 @@ export function SiteMap() {
   const [cameraPositions, setCameraPositions] = useState<Record<string, [number, number]>>(
     () => Object.fromEntries(mockCameras.map(c => [c.id, c.coords]))
   );
-  const [cameraOrientations, setCameraOrientations] = useState<Record<string, number>>(
-    () => Object.fromEntries(mockCameras.map(c => [c.id, 45]))
-  );
+
   const [draggingCamId, setDraggingCamId] = useState<string | null>(null);
   // Zone qualification modal
   const [pendingShape, setPendingShape] = useState<PendingShape | null>(null);
@@ -717,7 +715,6 @@ export function SiteMap() {
             {[
               { mode: 'polygon' as DrawMode, label: 'Zone (Polygone)', hint: 'Tracer → Qualifier + Règle HSE' },
               { mode: 'line' as DrawMode, label: 'Ligne / Périmètre', hint: null },
-              { mode: 'point' as DrawMode, label: 'Point d\'intérêt', hint: null },
               { mode: 'camera' as DrawMode, label: 'Ajouter Caméra', hint: null },
             ].map(({ mode, label, hint }) => (
               <div key={mode}>
@@ -795,6 +792,12 @@ export function SiteMap() {
                         <div className="text-slate-500 text-[10px] truncate">
                           {zt?.label}{isCovered ? ` · CAM-0${shape.linkedCameraId}` : ''}
                         </div>
+                        {shape.hseRule && (
+                          <div className="text-amber-400/80 text-[10px] truncate flex items-center gap-1 mt-0.5">
+                            <ShieldCheck size={9} className="shrink-0" />
+                            {shape.hseRule}
+                          </div>
+                        )}
                       </div>
                     </div>
                     {/* Hover actions */}
@@ -846,22 +849,14 @@ export function SiteMap() {
                         {cam.status === 'active' ? '● Actif' : '⚙ Maint.'}
                       </span>
                     </div>
-                    {/* Orientation slider — visible on hover */}
+                    {/* Coordonnées X et Y — visibles au survol */}
                     <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center gap-2">
-                        <RotateCcw size={10} className="text-slate-500 shrink-0" />
-                        <input
-                          type="range" min={0} max={359} step={5}
-                          value={cameraOrientations[cam.id] ?? 45}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setCameraOrientations(prev => ({ ...prev, [cam.id]: Number(e.target.value) }));
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-1 h-1 accent-blue-400 cursor-pointer"
-                          title={`Orientation: ${cameraOrientations[cam.id] ?? 45}°`}
-                        />
-                        <span className="text-[10px] text-blue-400 font-mono w-8 text-right shrink-0">{cameraOrientations[cam.id] ?? 45}°</span>
+                      <div className="flex items-center gap-2 text-[10.5px] font-mono text-slate-400">
+                        <MapPin size={10} className="text-slate-500 shrink-0" />
+                        <div className="flex-1 flex gap-3">
+                          <span>X: {pos[1].toFixed(5)}</span>
+                          <span>Y: {pos[0].toFixed(5)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -973,7 +968,7 @@ export function SiteMap() {
 
         <MapContainer
           center={[33.5731, -7.5898]}
-          zoom={13}
+          zoom={15}
           className="h-full w-full"
           attributionControl={false}
           style={{ background: "#0f172a" }}
@@ -1022,36 +1017,9 @@ export function SiteMap() {
           {/* System Cameras (from mockData) — draggable to reposition */}
           {mockCameras.map((cam) => {
             const pos = cameraPositions[cam.id] ?? cam.coords;
-            const angle = cameraOrientations[cam.id] ?? 45;
             const isActive = cam.status === 'active';
-            const coneColor = isActive ? '#3b82f6' : '#f59e0b';
-            // Add pulse animation wrapper for maintenance cameras
-            const coneClass = !isActive ? "animate-pulse" : "";
-            const coneSvg = `<div class="${coneClass}" style="transform:rotate(${angle}deg);transform-origin:center;width:100px;height:100px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-                <path d="M50 50 L100 20 A60 60 0 0 1 100 80 Z"
-                  fill="${coneColor}" fill-opacity="0.22"
-                  stroke="${coneColor}" stroke-width="1.2" stroke-opacity="0.65"/>
-              </svg>
-            </div>`;
             return (
               <React.Fragment key={cam.id}>
-                {/* Cone of vision — interactive for tooltip */}
-                <Marker
-                  position={pos}
-                  icon={L.divIcon({ html: coneSvg, iconSize: [100, 100], iconAnchor: [50, 50], className: '' })}
-                  zIndexOffset={-100}
-                >
-                  <Tooltip direction="right" offset={[30, 0]} opacity={1}
-                    className="!bg-[#0f172a] !border-blue-500/60 !text-white !text-xs !rounded-lg !shadow-2xl !px-3 !py-2">
-                    <div className="font-bold text-blue-300">{cam.name}</div>
-                    <div className="text-slate-300 text-[11px]">{cam.location}</div>
-                    <div className="text-slate-400 text-[10px] mt-1">FOV: 90° · Orientation: {angle}°</div>
-                    <div className={`mt-1 text-[10px] font-semibold ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>
-                      {isActive ? '● ACTIF' : '⚙ MAINTENANCE'}
-                    </div>
-                  </Tooltip>
-                </Marker>
                 {/* Camera marker */}
                 <Marker
                   position={pos}
@@ -1066,28 +1034,25 @@ export function SiteMap() {
                     },
                   }}
                 >
-                  <Tooltip direction="top" offset={[0, -20]} opacity={1}
-                    className="!bg-[#1a2235] !border-blue-500 !text-white !text-xs !rounded-lg !shadow-xl !px-3 !py-2 !pointer-events-auto"
-                    interactive={true}
+                  <Tooltip direction="top" offset={[0, -20]} opacity={1} sticky={false}
+                    className="!bg-[#1a2235] !border-blue-500/60 !text-white !text-xs !rounded-xl !shadow-2xl !px-3 !py-2.5 !pointer-events-none"
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="font-bold">{cam.name}</div>
-                      <button className="text-slate-400 hover:text-white transition-colors cursor-pointer" title="Paramètres Caméra (Simulé)">
-                        <Settings size={14} />
-                      </button>
-                    </div>
-                    <div className="text-slate-300 text-[11px] mb-1">{cam.location}</div>
-                    
-                    <div className="flex items-center justify-between border-t border-slate-700/50 pt-1.5 mt-1">
-                      <div className={`text-[10px] font-semibold ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {isActive ? '● ACTIF' : '⚙ MAINTENANCE'}
+                    <div className="min-w-[190px]">
+                      <div className="flex items-center justify-between gap-4 mb-1">
+                        <div className="font-bold text-sm">{cam.name}</div>
+                        <Settings size={13} className="text-slate-400 shrink-0" />
                       </div>
-                      <div className="text-slate-400 text-[10px]">
-                        <Eye size={10} className="inline mr-1 mb-0.5"/>
-                        FOV: 90° · {angle}°
+                      <div className="text-slate-300 text-[11px] mb-2">{cam.location}</div>
+                      <div className="flex items-center justify-between border-t border-slate-700/50 pt-1.5">
+                        <div className={`text-[10px] font-semibold ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {isActive ? '● ACTIF' : '⚙ MAINTENANCE'}
+                        </div>
+                        <div className="text-slate-400 text-[10px] font-mono text-right">
+                          X: {pos[1].toFixed(5)}<br/>Y: {pos[0].toFixed(5)}
+                        </div>
                       </div>
+                      <div className="text-slate-500 text-[9px] mt-1.5 italic">Glisser pour repositionner</div>
                     </div>
-                    <div className="text-slate-500 text-[9px] mt-1 italic">Glisser pour repositionner le marqueur</div>
                   </Tooltip>
                 </Marker>
               </React.Fragment>
