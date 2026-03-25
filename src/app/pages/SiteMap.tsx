@@ -8,8 +8,6 @@ import {
   Tooltip,
   useMapEvent,
   Polygon,
-  Polyline,
-  CircleMarker,
 } from "react-leaflet";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
@@ -30,7 +28,6 @@ import {
   Truck,
   Shield,
   ChevronDown,
-  Settings,
   RotateCcw,
   Pentagon,
   Camera,
@@ -38,7 +35,6 @@ import {
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { mockCameras } from "../data/mockData";
 import { useAuth } from "../context/AuthContext";
 
 // Fix default marker icons
@@ -135,11 +131,6 @@ interface PendingPolygon {
   points: [number, number][];
 }
 
-const computeCentroid = (points: [number, number][]): [number, number] => {
-  const lat = points.reduce((s, p) => s + p[0], 0) / points.length;
-  const lng = points.reduce((s, p) => s + p[1], 0) / points.length;
-  return [lat, lng];
-};
 
 // ─── Map click handler ────────────────────────────────────────────────────────
 const MapClickHandler = ({
@@ -223,7 +214,6 @@ export function SiteMap() {
   const [cameras, setCameras] = useState<DrawnCamera[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [savedData, setSavedData] = useState<SavedData | null>(null);
   const [showLayersPanel, setShowLayersPanel] = useState(false);
 
   // In-progress polygon points
@@ -233,7 +223,6 @@ export function SiteMap() {
   // const [cameraPositions, setCameraPositions] = useState<Record<string, [number, number]>>(
   //   () => Object.fromEntries(mockCameras.map((c) => [c.id, c.coords]))
   // );
-  const [draggingCamId, setDraggingCamId] = useState<string | null>(null);
 
   // ── Zone modal (create / edit) ──
   const [pendingPolygon, setPendingPolygon] = useState<PendingPolygon | null>(null);
@@ -360,9 +349,6 @@ export function SiteMap() {
       setEditingShapeId(null);
     } else {
       if (!pendingPolygon) return;
-      if (camId) {
-        setCameraPositions((prev) => ({ ...prev, [camId]: computeCentroid(pendingPolygon.points) }));
-      }
       const newShape: DrawnShape = {
         id: `shape-${Date.now()}`,
         type: "polygon",
@@ -442,7 +428,6 @@ export function SiteMap() {
   // 🔥 IMPORTANT
   localStorage.setItem("mapData", JSON.stringify(data));
 
-  setSavedData(data);
   setIsDirty(false);
 
   setTimeout(() => setIsSaving(false), 1800);
@@ -456,7 +441,6 @@ useEffect(() => {
 
     setShapes(data.zones || []);
     setCameras(data.cameras || []);
-    setSavedData(data);
   }
 }, []);
 
