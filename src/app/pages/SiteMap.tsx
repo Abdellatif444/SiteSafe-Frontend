@@ -239,6 +239,7 @@ export function SiteMap() {
 
   // ── Camera modal ──
   const [pendingCameraPos, setPendingCameraPos] = useState<[number, number] | null>(null);
+  const [editingCameraId, setEditingCameraId] = useState<string | null>(null);
   const [camName, setCamName] = useState("");
   const [camX, setCamX] = useState("");
   const [camY, setCamY] = useState("");
@@ -248,7 +249,20 @@ export function SiteMap() {
   const mapRef = useRef<L.Map | null>(null);
 
   const zoneModalOpen = pendingPolygon !== null || editingShapeId !== null;
-  const cameraModalOpen = pendingCameraPos !== null;
+  const cameraModalOpen = pendingCameraPos !== null || editingCameraId !== null;
+
+  const closeCameraModal = () => {
+    setPendingCameraPos(null);
+    setEditingCameraId(null);
+  };
+
+  const openEditCameraModal = (camera: DrawnCamera) => {
+    setEditingCameraId(camera.id);
+    setCamName(camera.name);
+    setCamX(camera.position[1].toFixed(6));
+    setCamY(camera.position[0].toFixed(6));
+    setCamZone(camera.zoneLink || "");
+  };
 
   // ── Cursor ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -371,17 +385,29 @@ export function SiteMap() {
 
   // ── Confirm camera modal ──────────────────────────────────────────────────
   const confirmCamera = () => {
-    if (!pendingCameraPos) return;
-    const lat = parseFloat(camY) || pendingCameraPos[0];
-    const lng = parseFloat(camX) || pendingCameraPos[1];
-    const newCam: DrawnCamera = {
-      id: `cam-${Date.now()}`,
-      position: [lat, lng],
-      name: camName.trim() || `Caméra ${cameras.length + 1}`,
-      zoneLink: camZone || undefined,
-    };
-    setCameras((prev) => [...prev, newCam]);
-    setPendingCameraPos(null);
+    const lat = parseFloat(camY) || (pendingCameraPos ? pendingCameraPos[0] : 0);
+    const lng = parseFloat(camX) || (pendingCameraPos ? pendingCameraPos[1] : 0);
+
+    if (editingCameraId) {
+      setCameras((prev) =>
+        prev.map((c) =>
+          c.id === editingCameraId
+            ? { ...c, name: camName.trim() || c.name, position: [lat, lng], zoneLink: camZone || undefined }
+            : c
+        )
+      );
+      setEditingCameraId(null);
+    } else {
+      if (!pendingCameraPos) return;
+      const newCam: DrawnCamera = {
+        id: `cam-${Date.now()}`,
+        position: [lat, lng],
+        name: camName.trim() || `Caméra ${cameras.length + 1}`,
+        zoneLink: camZone || undefined,
+      };
+      setCameras((prev) => [...prev, newCam]);
+      setPendingCameraPos(null);
+    }
     setIsDirty(true);
   };
 
@@ -654,7 +680,8 @@ useEffect(() => {
                   {cameras.map((cam) => (
                     <div
                       key={cam.id}
-                      className="group flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-700/40 transition-colors"
+                      onClick={() => openEditCameraModal(cam)}
+                      className="group flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-slate-700/40 transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <Video size={12} className="text-blue-400 shrink-0" />
@@ -665,12 +692,20 @@ useEffect(() => {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => { setCameras((prev) => prev.filter((c) => c.id !== cam.id)); setIsDirty(true); }}
-                        className="w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100 shrink-0 ml-2"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openEditCameraModal(cam); }}
+                            className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setCameras((prev) => prev.filter((c) => c.id !== cam.id)); setIsDirty(true); }}
+                            className="w-6 h-6 flex items-center justify-center rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -911,11 +946,11 @@ useEffect(() => {
                       <Camera size={18} className="text-blue-500" />
                     </div>
                     <div>
-                      <h3 className="text-slate-900 font-extrabold text-lg">Ajouter une caméra</h3>
+                      <h3 className="text-slate-900 font-extrabold text-lg">{editingCameraId ? "Modifier la caméra" : "Ajouter une caméra"}</h3>
                       <p className="text-slate-500 text-xs mt-0.5">Définir les propriétés de la caméra</p>
                     </div>
                   </div>
-                  <button onClick={() => setPendingCameraPos(null)} className="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center">
+                  <button onClick={closeCameraModal} className="text-slate-400 hover:text-slate-700 w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center">
                     <X size={20} />
                   </button>
                 </div>
@@ -967,11 +1002,11 @@ useEffect(() => {
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t border-slate-100">
-                  <button onClick={() => setPendingCameraPos(null)} className="flex-[0.8] bg-white text-slate-700 hover:bg-slate-50 py-3 rounded-xl font-bold text-sm border border-slate-200">
+                  <button onClick={closeCameraModal} className="flex-[0.8] bg-white text-slate-700 hover:bg-slate-50 py-3 rounded-xl font-bold text-sm border border-slate-200">
                     Annuler
                   </button>
                   <button onClick={confirmCamera} className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-[0_4px_14px_rgba(59,130,246,0.25)]">
-                    Placer la caméra
+                    {editingCameraId ? "Enregistrer" : "Placer la caméra"}
                   </button>
                 </div>
               </div>
@@ -1088,13 +1123,44 @@ useEffect(() => {
 
             {/* User-placed cameras */}
             {cameras.map((camera) => (
-              <Marker key={camera.id} position={camera.position} icon={buildCameraIcon("active")}>
+              <Marker 
+                key={camera.id} 
+                position={camera.position} 
+                icon={buildCameraIcon("active")}
+                draggable={true}
+                eventHandlers={{
+                  click: () => openEditCameraModal(camera),
+                  dragend: (e) => {
+                    const marker = e.target as L.Marker;
+                    const newPos = marker.getLatLng();
+                    setCameras(prev => prev.map(c => 
+                      c.id === camera.id ? { ...c, position: [newPos.lat, newPos.lng] } : c
+                    ));
+                    setIsDirty(true);
+                  }
+                }}
+              >
                 <Tooltip direction="top" offset={[0, -20]} opacity={1}
-                  className="!bg-[#1a2235] !text-white !text-xs !rounded-lg !shadow-xl !px-3 !py-2"
+                  className="!bg-[#1a2235] !text-white !text-xs !rounded-xl !shadow-2xl !px-3 !py-2.5 !border-blue-500/50"
                 >
-                  <div className="font-bold">{camera.name}</div>
-                  {camera.zoneLink && <div className="text-slate-400 text-[10px] mt-0.5">→ {camera.zoneLink}</div>}
-                  <div className="text-slate-500 text-[10px] mt-0.5">Caméra manuelle</div>
+                  <div className="font-bold text-sm mb-1 text-blue-100">{camera.name}</div>
+                  {camera.zoneLink && <div className="text-slate-400 text-[10px] mb-1">→ {camera.zoneLink}</div>}
+                  <div className="text-slate-500 text-[10px] mb-2 font-medium">Caméra manuelle</div>
+                  
+                  {/* Coordonnées X,Y affichées proprement */}
+                  <div className="bg-[#0f172a] border border-blue-900/50 rounded-lg px-2 py-1.5 flex flex-col gap-0.5 mt-1">
+                    <div className="flex items-center justify-between gap-3 text-[9px] font-mono text-slate-300">
+                      <span className="text-blue-400">X:</span> {camera.position[1].toFixed(6)}
+                    </div>
+                    <div className="flex items-center justify-between gap-3 text-[9px] font-mono text-slate-300">
+                      <span className="text-orange-400">Y:</span> {camera.position[0].toFixed(6)}
+                    </div>
+                  </div>
+                  
+                  <div className="text-slate-500 text-[9px] mt-2 italic flex justify-between">
+                    <span>Clic pour modifier</span>
+                    <span>Glisser pour déplacer</span>
+                  </div>
                 </Tooltip>
               </Marker>
             ))}
