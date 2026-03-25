@@ -102,7 +102,7 @@ function NonConformiteModal({
   open: boolean;
   camera: (typeof cameraList)[0] | null;
   onValidate: (data: { comment: string; assignee: string; priority: string; deadline: string }) => void;
-  onReject: (comment: string) => void;
+  onReject: () => void;
   onClose: () => void;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -277,19 +277,34 @@ function NonConformiteModal({
                 </div>
               </div>
 
+              {/* Comment - Step 1 */}
+              <div className="px-5 mt-4">
+                <label className="text-xs text-gray-500 font-medium flex items-center gap-1.5 mb-2">
+                  <Edit2 size={13} className="text-gray-400" />
+                  Commentaire (optionnel)
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={2}
+                  placeholder="Ex : Anomalie confirmée sur vue aérienne, intervention requise..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 bg-white focus:outline-none focus:border-green-300 resize-none transition-all placeholder:text-gray-400"
+                />
+              </div>
+
               {/* Actions - Step 1 */}
-              <div className="flex gap-3 px-5 py-5 mt-2">
+              <div className="flex gap-4 px-5 py-5 mt-1">
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#F97215] hover:bg-[#E86B11] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-[0_4px_14px_rgba(249,114,21,0.25)]"
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#00A551] hover:bg-[#008A43] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
                 >
-                  <CheckCircle size={16} /> Valider la détection
+                  <CheckCircle size={18} /> Valider
                 </button>
                 <button
-                  onClick={() => onReject(comment)}
+                  onClick={() => onReject()}
                   className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
                 >
-                  <XCircle size={16} /> Rejeter
+                  <XCircle size={18} /> Rejeter
                 </button>
               </div>
             </>
