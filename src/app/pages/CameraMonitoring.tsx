@@ -1,25 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Video,
-  Maximize,
   AlertTriangle,
   MapPin,
   CheckCircle,
   FileText,
   User,
   Circle,
-  Activity,
-  Truck,
-  BarChart2,
   RefreshCw,
   XCircle,
   Edit2,
   Camera,
   Play,
-  Pause,
   AlertOctagon,
   Clock,
-  WifiOff,
   ExternalLink,
   Info,
 } from "lucide-react";
@@ -28,7 +22,7 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
-import { mockCameras as cameraList, mockAlerts } from "../data/mockData";
+import { mockCameras as cameraList } from "../data/mockData";
 import { useToast } from "../context/ToastContext";
 import { CreateIncidentModal } from "../components/CreateIncidentModal";
 import { CreateReportModal } from "../components/Modals";
@@ -107,11 +101,20 @@ function NonConformiteModal({
 }: {
   open: boolean;
   camera: (typeof cameraList)[0] | null;
-  onValidate: (comment: string) => void;
+  onValidate: (data: { comment: string; assignee: string; priority: string; deadline: string }) => void;
   onReject: (comment: string) => void;
   onClose: () => void;
 }) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [comment, setComment] = useState("");
+  const [assignee, setAssignee] = useState("");
+  const [priority, setPriority] = useState("high");
+  const [deadline, setDeadline] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  });
+
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -119,7 +122,15 @@ function NonConformiteModal({
 
   useEffect(() => {
     if (!open) {
+      setStep(1);
       setComment("");
+      setAssignee("");
+      setPriority("high");
+      setDeadline(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split("T")[0];
+      });
       setProgress(0);
       setPlaying(false);
       setElapsed(0);
@@ -158,16 +169,17 @@ function NonConformiteModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0 bg-white z-10">
           <div>
-            
             <h3 className="font-bold text-gray-800 text-base">
-              Examen de la violation HSE
+              {step === 1 ? "Examen de la violation HSE" : "Configuration de l'incident HSE"}
             </h3>
-            
+            {step === 2 && (
+              <p className="text-gray-500 text-xs mt-0.5">Affectation et détails de la non-conformité</p>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -177,122 +189,199 @@ function NonConformiteModal({
           </button>
         </div>
 
-        {/* Video zone */}
-        <div className="relative bg-gray-900 h-48 flex items-center justify-center overflow-hidden">
-          <ImageWithFallback
-            src={camera.image}
-            alt={camera.name}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${
-              playing ? "opacity-50" : "opacity-25"
-            }`}
-          />
-
-          {/* Play button */}
-          {!playing && (
-            <button
-              onClick={startVideo}
-              className="absolute inset-0 flex items-center justify-center z-10"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
-                  <Play size={20} className="text-white ml-1" />
-                </div>
-                <span className="text-white/70 text-xs font-medium">
-                  Lire le segment (10s)
-                </span>
-              </div>
-            </button>
-          )}
-
-          {/* Playing overlays */}
-          {playing && (
+        <div className="overflow-y-auto flex-1 custom-scrollbar pb-2">
+          {step === 1 ? (
             <>
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                <Circle
-                  size={6}
-                  className="fill-orange-400 text-orange-400 animate-pulse"
+              {/* Video zone */}
+              <div className="relative bg-gray-900 h-[220px] flex items-center justify-center overflow-hidden shrink-0">
+                <ImageWithFallback
+                  src={camera.image}
+                  alt={camera.name}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${playing ? "opacity-50" : "opacity-25"
+                    }`}
                 />
-                <span className="text-white text-[10px] font-bold tracking-wide">
-                  EXTRAIT
-                </span>
-              </div>
-              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono">
-                0:{String(Math.min(Math.floor(elapsed), 10)).padStart(2, "0")} /
-                0:10
-              </div>
-              {/* IA detection bounding box overlay */}
-              <div className="absolute top-1/3 right-1/4 border-2 border-red-500 rounded-lg p-1 animate-pulse z-10">
-                <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                  EPI Manquant ⚠
-                </span>
-              </div>
-              {missingVests > 0 && (
-                <div className="absolute top-1/2 left-1/3 border-2 border-orange-400 rounded-lg p-1 z-10">
-                  <span className="bg-orange-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                    Gilet absent
-                  </span>
+
+                {/* Play button */}
+                {!playing && (
+                  <button
+                    onClick={startVideo}
+                    className="absolute inset-0 flex items-center justify-center z-10"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
+                        <Play size={20} className="text-white ml-1" />
+                      </div>
+                      <span className="text-white/70 text-xs font-medium">
+                        Lire le segment (10s)
+                      </span>
+                    </div>
+                  </button>
+                )}
+
+                {/* Playing overlays */}
+                {playing && (
+                  <>
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                      <Circle
+                        size={6}
+                        className="fill-orange-400 text-orange-400 animate-pulse"
+                      />
+                      <span className="text-white text-[10px] font-bold tracking-wide">
+                        EXTRAIT
+                      </span>
+                    </div>
+                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono">
+                      0:{String(Math.min(Math.floor(elapsed), 10)).padStart(2, "0")} / 0:10
+                    </div>
+                    {/* IA detection bounding box overlay */}
+                    <div className="absolute top-1/3 right-1/4 border-2 border-red-500 rounded-lg p-1 animate-pulse z-10">
+                      <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                        EPI Manquant ⚠
+                      </span>
+                    </div>
+                    {missingVests > 0 && (
+                      <div className="absolute top-1/2 left-1/3 border-2 border-orange-400 rounded-lg p-1 z-10">
+                        <span className="bg-orange-400 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          Gilet absent
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Progress bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                  <div
+                    className="h-1 bg-orange-500 transition-all duration-100"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
-              )}
+              </div>
+
+              {/* Violation info */}
+              <div className="mx-5 mt-5 bg-orange-50 border border-orange-200 rounded-xl p-4 flex gap-3 shadow-sm">
+                <AlertTriangle
+                  size={18}
+                  className="text-orange-500 shrink-0 mt-0.5"
+                />
+                <div>
+                  <p className="text-sm font-bold text-orange-800">
+                    {violationDesc}
+                  </p>
+                  <p className="text-xs text-orange-600 mt-2 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-purple-200/50">
+                      IA · 87% confiance
+                    </span>
+                    <span className="font-medium">Détecté à {detectedAt}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions - Step 1 */}
+              <div className="flex gap-3 px-5 py-5 mt-2">
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#F97215] hover:bg-[#E86B11] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-[0_4px_14px_rgba(249,114,21,0.25)]"
+                >
+                  <CheckCircle size={16} /> Valider la détection
+                </button>
+                <button
+                  onClick={() => onReject(comment)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
+                >
+                  <XCircle size={16} /> Rejeter
+                </button>
+              </div>
             </>
+          ) : (
+            <div className="px-6 py-5 space-y-5">
+              {/* Affectation */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Affectation *</label>
+                <div className="relative">
+                  <select
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 cursor-pointer"
+                  >
+                    <option value="" disabled>Sélectionner un responsable ou entreprise</option>
+                    <option value="chef_chantier">Chef de Chantier Principal</option>
+                    <option value="entreprise_a">Entreprise Sous-traitante A</option>
+                    <option value="entreprise_b">Entreprise Sous-traitante B</option>
+                    <option value="hse_resp">Responsable HSE Zone Ouest</option>
+                  </select>
+                  <User size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Priorité & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Priorité *</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 cursor-pointer appearance-none"
+                  >
+                    <option value="critical">🔴 Critique (Immédiat)</option>
+                    <option value="high">🟠 Haute (Sous 24h)</option>
+                    <option value="medium">🟡 Moyenne (Sous 48h)</option>
+                    <option value="low">⚪ Basse (Info)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Date limite *</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Commentaire */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <Edit2 size={13} className="text-gray-400" />
+                  Notes ou Directives (Optionnel)
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={3}
+                  placeholder="Ex: Demander à l'équipe de se rapprocher du bureau d'accueil..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white resize-none transition-all placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* Informations Résumé */}
+              <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3 flex gap-3 mt-1 items-start">
+                <Info size={14} className="text-[#F97215] shrink-0 mt-0.5" />
+                <p className="text-xs text-orange-800 font-medium leading-relaxed">
+                  La validation créera automatiquement un rapport de non-conformité et notifiera les intéressés. La vidéo source sera jointe au dossier comme pièce à conviction.
+                </p>
+              </div>
+
+              {/* Actions - Step 2 */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex-[0.8] flex items-center justify-center bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 py-3 rounded-xl font-bold text-sm transition-all shadow-sm"
+                >
+                  Retour
+                </button>
+                <button
+                  onClick={() => onValidate({ comment, assignee, priority, deadline })}
+                  disabled={!assignee}
+                  className="flex-[1.2] flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold text-sm transition-all shadow-[0_4px_14px_rgba(22,163,74,0.25)]"
+                >
+                  <CheckCircle size={16} /> Confirmer l'incident
+                </button>
+              </div>
+            </div>
           )}
-
-          {/* Progress bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-            <div
-              className="h-1 bg-orange-500 transition-all duration-100"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Violation info */}
-        <div className="mx-5 mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3.5 flex gap-3">
-          <AlertTriangle
-            size={16}
-            className="text-orange-500 shrink-0 mt-0.5"
-          />
-          <div>
-            <p className="text-sm font-semibold text-orange-800">
-              {violationDesc}
-            </p>
-            <p className="text-xs text-orange-600 mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
-                IA · 87% confiance
-              </span>
-              Détecté à {detectedAt}
-            </p>
-          </div>
-        </div>
-
-        {/* Comment */}
-        <div className="px-5 mt-4">
-          <label className="text-xs text-gray-500 font-medium flex items-center gap-1 mb-1.5">
-            <Edit2 size={11} />
-            Commentaire (optionnel)
-          </label>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={2}
-            placeholder="Ex : Ouvriers en zone de transition, EPI enlevé temporairement…"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:border-orange-300 focus:bg-white resize-none transition"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 px-5 py-4">
-          <button
-            onClick={() => onValidate(comment)}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow-sm"
-          >
-            <CheckCircle size={15} /> Valider 
-          </button>
-          <button
-            onClick={() => onReject(comment)}
-            className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 hover:border-red-300 hover:text-red-600 text-gray-600 py-2.5 rounded-xl font-bold text-sm transition"
-          >
-            <XCircle size={15} /> Rejeter
-          </button>
         </div>
       </div>
     </div>
@@ -314,14 +403,7 @@ export function CameraMonitoring() {
 
   // ── Confirmation modal ──
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [modalIncidentType, setModalIncidentType] = useState<"zone" | "epi">(
-    "epi",
-  );
-
-  const openModal = (type: "zone" | "epi") => {
-    setModalIncidentType(type);
-    setShowConfirmModal(true);
-  };
+  const [modalIncidentType] = useState<"zone" | "epi">("epi");
 
   // ── Non-conformité modal ──
   const [showNonConformiteModal, setShowNonConformiteModal] = useState(false);
@@ -335,7 +417,7 @@ export function CameraMonitoring() {
   };
 
   // ── Auto-cycle ──
-  const [autoCycle, setAutoCycle] = useState(false);
+  const [autoCycle] = useState(false);
   const autoCycleRef = useRef(autoCycle);
   autoCycleRef.current = autoCycle;
 
@@ -351,11 +433,9 @@ export function CameraMonitoring() {
   const [frameCaptured, setFrameCaptured] = useState(false);
 
   // ── IA Overlays toggle ──
-  const [showOverlays, setShowOverlays] = useState(true);
+  const [showOverlays] = useState(true);
 
   // ── Manual compliance certification ──
-  const [certifiedComplianceTime, setCertifiedComplianceTime] =
-    useState<Date | null>(null);
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isReplayModalOpen, setIsReplayModalOpen] = useState(false);
@@ -367,13 +447,6 @@ export function CameraMonitoring() {
 
   // ── Maintenance mock data ──
   const maintenanceSince = "2h 15min";
-  const maintenanceDetails = {
-    reason: "Remplacement objectif caméra suite à détérioration météo",
-    technician: "M. Benali – Technicien SI",
-    estimatedReturn: "Aujourd'hui à 17h00",
-  };
-  const uncoveredZones =
-    selectedCamera.status === "maintenance" ? ["Zone A – Côté Ouest"] : [];
 
   useEffect(() => {
     if (passedCameraId) {
@@ -400,12 +473,6 @@ export function CameraMonitoring() {
   }, [autoCycle]);
 
   const activeCount = cameraList.filter((c) => c.status === "active").length;
-  const totalWorkers = cameraList
-    .filter((c) => c.status === "active")
-    .reduce((s, c) => s + c.detections.workers, 0);
-  const totalVehicles = cameraList
-    .filter((c) => c.status === "active")
-    .reduce((s, c) => s + c.detections.vehicles, 0);
   const alertCount = cameraList.filter(
     (c) =>
       c.status === "active" &&
@@ -423,12 +490,6 @@ export function CameraMonitoring() {
     (missingVests > 0 || missingHelmets > 0) &&
     !clearedAlerts.includes(selectedCamera.id);
 
-  const violationSeverity =
-    missingVests + missingHelmets >= 3 ? "CRITIQUE" : "MODÉRÉ";
-  const violationSeverityColor =
-    violationSeverity === "CRITIQUE"
-      ? "bg-red-700 text-white"
-      : "bg-orange-500 text-white";
 
   const violationText =
     missingVests > 0 && missingHelmets > 0
@@ -470,28 +531,10 @@ export function CameraMonitoring() {
     return true;
   });
 
-  const handleIgnore = () => {
-    setClearedAlerts((prev) => {
-      const newCleared = [...prev, selectedCamera.id];
-      const nextAlertCam = cameraList.find(
-        (c) =>
-          c.status === "active" &&
-          (c.detections.vests < c.detections.workers ||
-            c.detections.helmets < c.detections.workers) &&
-          !newCleared.includes(c.id),
-      );
-      if (nextAlertCam) {
-        setTimeout(() => setSelectedCamera(nextAlertCam), 600);
-      }
-      return newCleared;
-    });
-  };
-
   const handleSelectCamera = (cam: typeof selectedCamera) => {
     setSelectedCamera(cam);
     setLastCheckTime(new Date());
     setComplianceStartTime(new Date());
-    setCertifiedComplianceTime(null);
   };
 
   const handleRefresh = () => {
@@ -536,20 +579,15 @@ export function CameraMonitoring() {
       <NonConformiteModal
         open={showNonConformiteModal}
         camera={nonConformiteCamera}
-        onValidate={(comment) => {
+        onValidate={(data) => {
           setShowNonConformiteModal(false);
-          addToast({
-            type: "success",
-            message: `Non-conformité validée — incident créé${comment ? " : " + comment.slice(0, 40) : ""}`,
-          });
+          const commentPart = data.comment ? " : " + data.comment.substring(0, 40) : "";
+          addToast(`Incident créé (Affecté à ${data.assignee})${commentPart}`, "success");
           navigate("/incidents");
         }}
-        onReject={(comment) => {
+        onReject={() => {
           setShowNonConformiteModal(false);
-          addToast({
-            type: "info",
-            message: "Détection rejetée comme fausse alerte.",
-          });
+          addToast("Détection rejetée comme fausse alerte.", "info");
           if (nonConformiteCamera) {
             setClearedAlerts((prev) => [...prev, nonConformiteCamera.id]);
           }
@@ -591,11 +629,10 @@ export function CameraMonitoring() {
                 <button
                   key={f.key}
                   onClick={() => setCameraFilter(f.key)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                    cameraFilter === f.key
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${cameraFilter === f.key
                       ? "bg-gray-800 text-white"
                       : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {f.label}
                 </button>
@@ -615,7 +652,7 @@ export function CameraMonitoring() {
                 (camMissingVests > 0 || camMissingHelmets > 0);
               const camAlertCount = camHasViolation
                 ? (camMissingVests > 0 ? camMissingVests : 0) +
-                  (camMissingHelmets > 0 ? camMissingHelmets : 0)
+                (camMissingHelmets > 0 ? camMissingHelmets : 0)
                 : 0;
 
               return (
@@ -623,12 +660,11 @@ export function CameraMonitoring() {
                   key={cam.id}
                   onClick={() => handleSelectCamera(cam)}
                   className={`shrink-0 w-44 snap-start group text-left border-2 rounded-2xl overflow-hidden transition-all shadow-sm hover:shadow-md focus-visible:ring-4 focus-visible:ring-site-orange focus-visible:outline-none focus-visible:border-none
-                    ${
-                      selectedCamera.id === cam.id
-                        ? "border-[#F97215] ring-2 ring-orange-200"
-                        : camAlertCount > 0
-                          ? "border-red-400 hover:border-red-500 ring-2 ring-red-100"
-                          : "border-gray-200 hover:border-gray-300"
+                    ${selectedCamera.id === cam.id
+                      ? "border-[#F97215] ring-2 ring-orange-200"
+                      : camAlertCount > 0
+                        ? "border-red-400 hover:border-red-500 ring-2 ring-red-100"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                 >
                   <div className="aspect-video relative bg-gray-100 overflow-hidden">
@@ -916,9 +952,8 @@ export function CameraMonitoring() {
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={handleRefresh}
-                  className={`flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition ${
-                    isRefreshing ? "animate-spin" : ""
-                  }`}
+                  className={`flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition ${isRefreshing ? "animate-spin" : ""
+                    }`}
                   title="Actualiser"
                 >
                   <RefreshCw size={12} />
