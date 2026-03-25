@@ -2,12 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Plane, Calendar, MapPin, Clock, Play,
   CheckCircle, AlertTriangle, Plus, X, Circle,
-  FileText, Video, Edit2, RotateCw, BatteryLow,
-  XCircle, Edit, Filter, Search, ChevronDown, SlidersHorizontal
+  Video, Edit2, RotateCw, BatteryLow,
+  XCircle, Edit, Search, ChevronDown, User, Info
 } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useToast } from '../context/ToastContext';
-import { CreateIncidentModal } from '../components/CreateIncidentModal';
 import { CreateReportModal } from '../components/Modals';
 import { GenericConfirmModal } from '../components/AdvancedModals';
 
@@ -43,16 +42,23 @@ function hasActiveFilters(f: FilterState) {
 // ─── Non-Conformité Modal ─────────────────────────────────────────────────────
 
 function NonConformiteModal({
-  open, anomaly, missionName, onValidate, onReject, onClose,
+  open, anomaly, onValidate, onReject, onClose,
 }: {
   open: boolean;
   anomaly: { id: number; type: string; location: string; timestamp: string; severity: string; image: string } | null;
-  missionName: string;
-  onValidate: (comment: string) => void;
-  onReject: (comment: string) => void;
+  onValidate: (data: { comment: string; assignee: string; priority: string; deadline: string }) => void;
+  onReject: () => void;
   onClose: () => void;
 }) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [comment, setComment] = useState('');
+  const [assignee, setAssignee] = useState("");
+  const [priority, setPriority] = useState("high");
+  const [deadline, setDeadline] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  });
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -60,7 +66,16 @@ function NonConformiteModal({
 
   useEffect(() => {
     if (!open) {
-      setComment(''); setProgress(0); setPlaying(false); setElapsed(0);
+      setStep(1);
+      setComment('');
+      setAssignee("");
+      setPriority("high");
+      setDeadline(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split("T")[0];
+      });
+      setProgress(0); setPlaying(false); setElapsed(0);
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [open]);
@@ -88,81 +103,178 @@ function NonConformiteModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3 shrink-0 bg-white z-10">
           <div>
-            
-            <h3 className="font-bold text-gray-800 text-base">Examen de la violation HSE</h3>
-            
+            <h3 className="font-bold text-gray-800 text-base">
+              {step === 1 ? 'Examen de la violation HSE' : 'Configuration de l\'incident HSE'}
+            </h3>
+            {step === 2 && (
+              <p className="text-gray-500 text-xs mt-0.5">Affectation et détails de la non-conformité</p>
+            )}
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition shrink-0 mt-0.5">
             <XCircle size={14} />
           </button>
         </div>
-        {/* Video */}
-        <div className="relative bg-gray-900 h-48 flex items-center justify-center overflow-hidden">
-          <ImageWithFallback src={anomaly.image} alt={anomaly.type}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${playing ? 'opacity-50' : 'opacity-25'}`} />
-          {!playing && (
-            <button onClick={startVideo} className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
-                  <Play size={20} className="text-white ml-1" />
-                </div>
-                <span className="text-white/70 text-xs font-medium">Lire le segment (10s)</span>
-              </div>
-            </button>
-          )}
-          {playing && (
+        <div className="overflow-y-auto max-h-[80vh] custom-scrollbar">
+          {step === 1 ? (
             <>
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
-                <Circle size={6} className="fill-orange-400 text-orange-400 animate-pulse" />
-                <span className="text-white text-[10px] font-bold tracking-wide">EXTRAIT DRONE</span>
+              {/* Video */}
+              <div className="relative bg-gray-900 h-48 flex items-center justify-center overflow-hidden">
+                <ImageWithFallback src={anomaly.image} alt={anomaly.type}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${playing ? 'opacity-50' : 'opacity-25'}`} />
+                {!playing && (
+                  <button onClick={startVideo} className="absolute inset-0 flex items-center justify-center z-10">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-14 h-14 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95">
+                        <Play size={20} className="text-white ml-1" />
+                      </div>
+                      <span className="text-white/70 text-xs font-medium">Lire le segment (10s)</span>
+                    </div>
+                  </button>
+                )}
+                {playing && (
+                  <>
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
+                      <Circle size={6} className="fill-orange-400 text-orange-400 animate-pulse" />
+                      <span className="text-white text-[10px] font-bold tracking-wide">EXTRAIT DRONE</span>
+                    </div>
+                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono">
+                      0:{String(Math.min(Math.floor(elapsed), 10)).padStart(2, '0')} / 0:10
+                    </div>
+                    <div className="absolute top-1/3 right-1/4 border-2 border-red-500 rounded-lg p-1 animate-pulse z-10">
+                      <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">{anomaly.type} ⚠</span>
+                    </div>
+                  </>
+                )}
+                <div className="absolute bottom-3 left-3 z-10">
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm ${severityColor}`}>{anomaly.severity}</span>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                  <div className="h-1 bg-orange-500 transition-all duration-100" style={{ width: `${progress}%` }} />
+                </div>
               </div>
-              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono">
-                0:{String(Math.min(Math.floor(elapsed), 10)).padStart(2, '0')} / 0:10
+              {/* Info */}
+              <div className="mx-5 mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3.5 flex gap-3">
+                <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-orange-800">{anomaly.type}</p>
+                  <p className="text-xs text-orange-600 mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">IA Drone · 91% confiance</span>
+                    Détecté à {anomaly.timestamp}
+                  </p>
+                </div>
               </div>
-              <div className="absolute top-1/3 right-1/4 border-2 border-red-500 rounded-lg p-1 animate-pulse z-10">
-                <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">{anomaly.type} ⚠</span>
+              {/* Comment */}
+              <div className="px-5 mt-4">
+                <label className="text-xs text-gray-500 font-medium flex items-center gap-1 mb-1.5">
+                  <Edit size={11} /> Commentaire (optionnel)
+                </label>
+                <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2}
+                  placeholder="Ex : Anomalie confirmée sur vue aérienne, intervention requise…"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:border-orange-300 focus:bg-white resize-none transition" />
+              </div>
+              {/* Actions */}
+              <div className="flex gap-3 px-5 py-4">
+                <button onClick={() => setStep(2)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow-sm">
+                  <CheckCircle size={15} /> Valider 
+                </button>
+                <button onClick={() => onReject()}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 hover:border-red-300 hover:text-red-600 text-gray-600 py-2.5 rounded-xl font-bold text-sm transition">
+                  <XCircle size={15} /> Rejeter
+                </button>
               </div>
             </>
+          ) : (
+            <div className="px-5 py-4 space-y-4">
+              {/* Affectation */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5">Affectation *</label>
+                <div className="relative">
+                  <select
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 cursor-pointer"
+                  >
+                    <option value="" disabled>Sélectionner un responsable ou entreprise</option>
+                    <option value="chef_chantier">Chef de Chantier Principal</option>
+                    <option value="entreprise_a">Entreprise Sous-traitante A</option>
+                    <option value="entreprise_b">Entreprise Sous-traitante B</option>
+                    <option value="hse_resp">Responsable HSE Zone Ouest</option>
+                  </select>
+                  <User size={15} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Priorité & Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Priorité *</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 cursor-pointer appearance-none"
+                  >
+                    <option value="critical">🔴 Critique (Immédiat)</option>
+                    <option value="high">🟠 Haute (Sous 24h)</option>
+                    <option value="medium">🟡 Moyenne (Sous 48h)</option>
+                    <option value="low">⚪ Basse (Info)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Date limite *</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white transition-all font-medium text-gray-800 text-center"
+                  />
+                </div>
+              </div>
+
+              {/* Commentaire */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <Edit2 size={13} className="text-gray-400" />
+                  Notes ou Directives (Optionnel)
+                </label>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  rows={2}
+                  placeholder="Ex: Demander à l'équipe de se rapprocher du bureau d'accueil..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#F97215] focus:bg-white resize-none transition-all placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* Informations Résumé */}
+              <div className="bg-orange-50/50 border border-orange-100 rounded-xl p-3 flex gap-3 mt-1 items-start">
+                <Info size={14} className="text-[#F97215] shrink-0 mt-0.5" />
+                <p className="text-xs text-orange-800 font-medium leading-relaxed">
+                  La validation créera automatiquement un rapport de non-conformité et notifiera les intéressés. La vidéo source sera jointe au dossier comme pièce à conviction.
+                </p>
+              </div>
+
+              {/* Actions - Step 2 */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex-[0.8] flex items-center justify-center bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm"
+                >
+                  Retour
+                </button>
+                <button
+                  onClick={() => onValidate({ comment, assignee, priority, deadline })}
+                  disabled={!assignee}
+                  className="flex-[1.2] flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-2.5 rounded-xl font-bold text-sm transition-all shadow-[0_4px_14px_rgba(22,163,74,0.25)]"
+                >
+                  <CheckCircle size={16} /> Confirmer l'incident
+                </button>
+              </div>
+            </div>
           )}
-          <div className="absolute bottom-3 left-3 z-10">
-            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm ${severityColor}`}>{anomaly.severity}</span>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-            <div className="h-1 bg-orange-500 transition-all duration-100" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-        {/* Info */}
-        <div className="mx-5 mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3.5 flex gap-3">
-          <AlertTriangle size={16} className="text-orange-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-orange-800">{anomaly.type}</p>
-            <p className="text-xs text-orange-600 mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-bold">IA Drone · 91% confiance</span>
-              Détecté à {anomaly.timestamp}
-            </p>
-          </div>
-        </div>
-        {/* Comment */}
-        <div className="px-5 mt-4">
-          <label className="text-xs text-gray-500 font-medium flex items-center gap-1 mb-1.5">
-            <Edit size={11} /> Commentaire (optionnel)
-          </label>
-          <textarea value={comment} onChange={e => setComment(e.target.value)} rows={2}
-            placeholder="Ex : Anomalie confirmée sur vue aérienne, intervention requise…"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:border-orange-300 focus:bg-white resize-none transition" />
-        </div>
-        {/* Actions */}
-        <div className="flex gap-3 px-5 py-4">
-          <button onClick={() => onValidate(comment)}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow-sm">
-            <CheckCircle size={15} /> Valider 
-          </button>
-          <button onClick={() => onReject(comment)}
-            className="flex-1 flex items-center justify-center gap-2 bg-white border-2 border-gray-200 hover:border-red-300 hover:text-red-600 text-gray-600 py-2.5 rounded-xl font-bold text-sm transition">
-            <XCircle size={15} /> Rejeter
-          </button>
         </div>
         
       </div>
@@ -334,14 +446,13 @@ function FilterPanel({
 // ─── Mission Card ─────────────────────────────────────────────────────────────
 
 function MissionCard({
-  mission, anomalies, onOpenAnomaly, onStartMission, onRestartMission, onOpenReport, onEditMission,
+  mission, anomalies, onOpenAnomaly, onStartMission, onRestartMission, onEditMission,
 }: {
   mission: Mission;
   anomalies: typeof detectedAnomalies;
   onOpenAnomaly: (anomaly: typeof detectedAnomalies[0]) => void;
   onStartMission: () => void;
   onRestartMission: () => void;
-  onOpenReport: () => void;
   onEditMission: () => void;
 }) {
   const [videoPlaying, setVideoPlaying] = useState(false);
@@ -536,10 +647,8 @@ export function DroneMissions() {
 
   // ── Filter state ──
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [showFilters, setShowFilters] = useState(false);
 
   const { addToast } = useToast();
-  const [isIncidentOpen, setIsIncidentOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isConfirmStartOpen, setIsConfirmStartOpen] = useState(false);
   const [isConfirmRestartOpen, setIsConfirmRestartOpen] = useState(false);
@@ -548,12 +657,10 @@ export function DroneMissions() {
   // ── Non-Conformité Modal ──
   const [showNonConformiteModal, setShowNonConformiteModal] = useState(false);
   const [activeAnomaly, setActiveAnomaly] = useState<typeof detectedAnomalies[0] | null>(null);
-  const [activeMissionName, setActiveMissionName] = useState('');
   const [rejectedAnomalies, setRejectedAnomalies] = useState<number[]>([]);
 
-  const openAnomaly = (anomaly: typeof detectedAnomalies[0], missionName: string) => {
+  const openAnomaly = (anomaly: typeof detectedAnomalies[0]) => {
     setActiveAnomaly(anomaly);
-    setActiveMissionName(missionName);
     setShowNonConformiteModal(true);
   };
 
@@ -582,12 +689,6 @@ export function DroneMissions() {
     addToast('Mission planifiée avec succès.', 'success');
   };
 
-  const completed      = missionsList.filter(m => m.status === 'completed').length;
-  const inProgress     = missionsList.filter(m => m.status === 'in-progress').length;
-  const scheduled      = missionsList.filter(m => m.status === 'scheduled').length;
-  const totalAnomalies = missionsList.reduce((s, m) => s + m.anomalies, 0);
-  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
-
   return (
     <div className="bg-[#F4F7FC] font-sans min-h-full">
 
@@ -595,16 +696,19 @@ export function DroneMissions() {
       <NonConformiteModal
         open={showNonConformiteModal}
         anomaly={activeAnomaly}
-        missionName={activeMissionName}
-        onValidate={(comment) => {
+        onValidate={({ comment, assignee }) => {
           setShowNonConformiteModal(false);
-          addToast({ type: 'success', message: `Non-conformité validée — incident créé${comment ? ' : ' + comment.slice(0, 40) : ''}` });
-          setIsIncidentOpen(true);
+          const commentPart = comment ? ' : ' + comment.slice(0, 40) : '';
+          const assigneeName = assignee === 'chef_chantier' ? 'Chef de Chantier Principal' :
+                               assignee === 'entreprise_a' ? 'Entreprise Sous-traitante A' :
+                               assignee === 'entreprise_b' ? 'Entreprise Sous-traitante B' :
+                               assignee === 'hse_resp' ? 'Responsable HSE Zone Ouest' : assignee;
+          addToast(`Incident créé et affecté à ${assigneeName}${commentPart}`, 'success');
         }}
-        onReject={(comment) => {
+        onReject={() => {
           setShowNonConformiteModal(false);
           if (activeAnomaly) setRejectedAnomalies(prev => [...prev, activeAnomaly.id]);
-          addToast({ type: 'info', message: 'Détection rejetée comme fausse alerte.' });
+          addToast('Détection rejetée comme fausse alerte.', 'info');
         }}
         onClose={() => setShowNonConformiteModal(false)}
       />
@@ -658,10 +762,9 @@ export function DroneMissions() {
                 key={mission.id}
                 mission={mission}
                 anomalies={detectedAnomalies.filter(a => !rejectedAnomalies.includes(a.id))}
-                onOpenAnomaly={(anomaly) => openAnomaly(anomaly, mission.name)}
+                onOpenAnomaly={(anomaly) => openAnomaly(anomaly)}
                 onStartMission={() => { setPendingMissionId(mission.id); setIsConfirmStartOpen(true); }}
                 onRestartMission={() => { setPendingMissionId(mission.id); setIsConfirmRestartOpen(true); }}
-                onOpenReport={() => setIsReportOpen(true)}
                 onEditMission={() => setShowForm(true)}
               />
             ))}
@@ -755,7 +858,6 @@ export function DroneMissions() {
       )}
 
       {/* ── Modals ── */}
-      <CreateIncidentModal isOpen={isIncidentOpen} onClose={() => setIsIncidentOpen(false)} />
       <CreateReportModal isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
 
       <GenericConfirmModal
