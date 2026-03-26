@@ -5,8 +5,6 @@ import {
   Video,
   Plane,
   Camera,
-  Shield,
-  AlertTriangle,
   FileText,
   BarChart3,
   Settings,
@@ -37,19 +35,17 @@ const navItems = [
   { path: '/cameras', icon: Video, label: 'Caméras' },
   { path: '/drones', icon: Plane, label: 'Drones' },
   { path: '/photos', icon: Camera, label: 'Inspection Photo' },
-  { path: '/rules', icon: Shield, label: 'Règles HSE' },
-  { path: '/alerts', icon: AlertTriangle, label: 'Alertes' },
   { path: '/incidents', icon: FileText, label: 'Incidents' },
   { path: '/reports', icon: BarChart3, label: 'Rapports' },
   { path: '/config', icon: Settings, label: 'Configuration' },
 ];
 
 const rolePermissions: Record<Role, string[]> = {
-  admin: ['/', '/map', '/cameras', '/drones', '/photos', '/rules', '/alerts', '/incidents', '/reports', '/config'],
-  hse_inspector: ['/', '/map', '/cameras', '/drones', '/photos', '/rules', '/alerts', '/incidents', '/reports'],
-  site_director: ['/', '/map', '/alerts', '/incidents', '/reports'],
-  site_manager: ['/', '/rules', '/incidents', '/photos'],
-  auditor: ['/', '/reports', '/rules'],
+  admin: ['/', '/map', '/cameras', '/drones', '/photos', '/incidents', '/reports', '/config'],
+  hse_inspector: ['/', '/map', '/cameras', '/drones', '/photos', '/incidents', '/reports'],
+  site_director: ['/', '/map', '/incidents', '/reports'],
+  site_manager: ['/', '/incidents', '/photos'],
+  auditor: ['/', '/reports'],
 };
 
 export function Layout() {

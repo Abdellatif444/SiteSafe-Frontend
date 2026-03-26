@@ -115,6 +115,24 @@ function NonConformiteModal({
     return d.toISOString().split("T")[0];
   });
 
+  const [currentVideoIdx, setCurrentVideoIdx] = useState(0);
+
+  const mockVideos = camera ? [
+    { id: 1, src: camera.image, title: "Prédiction Principale", time: "11:23:50" },
+    { id: 2, src: camera.image, title: "Suivi Anomalie", time: "11:23:55" },
+    { id: 3, src: camera.image, title: "Confirmation Automatique", time: "11:24:02" }
+  ] : [];
+
+  const handleNextMedia = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentVideoIdx((prev) => (prev + 1) % mockVideos.length);
+  };
+
+  const handlePrevMedia = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentVideoIdx((prev) => (prev - 1 + mockVideos.length) % mockVideos.length);
+  };
+
   const [progress, setProgress] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -134,6 +152,7 @@ function NonConformiteModal({
       setProgress(0);
       setPlaying(false);
       setElapsed(0);
+      setCurrentVideoIdx(0);
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }, [open]);
@@ -193,9 +212,36 @@ function NonConformiteModal({
           {step === 1 ? (
             <>
               {/* Video zone */}
-              <div className="relative bg-gray-900 h-[220px] flex items-center justify-center overflow-hidden shrink-0">
+              <div className="relative bg-gray-900 h-[220px] flex items-center justify-center overflow-hidden shrink-0 group">
+                
+                {/* Carousel Navigation */}
+                {mockVideos.length > 1 && (
+                  <>
+                    <button 
+                      onClick={handlePrevMedia}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 flex items-center justify-center text-white z-30 opacity-0 group-hover:opacity-100 transition-all shadow-lg backdrop-blur-md"
+                      title="Prédiction précédente"
+                    >
+                      <span className="text-sm font-bold font-mono -ml-0.5">{"<"}</span>
+                    </button>
+                    <button 
+                      onClick={handleNextMedia}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 flex items-center justify-center text-white z-30 opacity-0 group-hover:opacity-100 transition-all shadow-lg backdrop-blur-md"
+                      title="Prédiction suivante"
+                    >
+                      <span className="text-sm font-bold font-mono -mr-0.5">{">"}</span>
+                    </button>
+                  </>
+                )}
+
+                {/* Prédictions Counter */}
+                <div className="absolute top-3 right-3 bg-indigo-600/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[11px] font-bold z-20 shadow-md border border-indigo-400/30 flex items-center gap-1.5">
+                  <Video size={12} className="text-indigo-200" />
+                  {currentVideoIdx + 1}/{mockVideos.length} vidéos prédites
+                </div>
+
                 <ImageWithFallback
-                  src={camera.image}
+                  src={mockVideos[currentVideoIdx]?.src || camera.image}
                   alt={camera.name}
                   className={`w-full h-full object-cover transition-opacity duration-300 ${playing ? "opacity-50" : "opacity-25"
                     }`}
@@ -230,7 +276,7 @@ function NonConformiteModal({
                         EXTRAIT
                       </span>
                     </div>
-                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono">
+                    <div className="absolute bottom-4 right-3 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-white text-[10px] font-mono z-20">
                       0:{String(Math.min(Math.floor(elapsed), 10)).padStart(2, "0")} / 0:10
                     </div>
                     {/* IA detection bounding box overlay */}
@@ -272,7 +318,7 @@ function NonConformiteModal({
                     <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-purple-200/50">
                       IA · 87% confiance
                     </span>
-                    <span className="font-medium">Détecté à {detectedAt}</span>
+                    <span className="font-medium">Détecté à {mockVideos[currentVideoIdx]?.time || detectedAt}</span>
                   </p>
                 </div>
               </div>
@@ -714,18 +760,19 @@ export function CameraMonitoring() {
                     )}
                     {/* Violation count badge on thumbnail */}
                     {camAlertCount > 0 && (
-                      <div
-                        className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-red-500/90 backdrop-blur-sm px-1.5 py-0.5 rounded-full"
+                      <button
+                        title="Consulter les prédictions détectées"
+                        className="absolute bottom-1.5 left-1.5 flex items-center gap-1 bg-red-500 hover:bg-red-600/95 text-white shadow-lg backdrop-blur-sm px-2.5 py-1 rounded-full cursor-pointer hover:scale-105 active:scale-95 transition-all ring-2 ring-transparent hover:ring-white/50 z-20"
                         onClick={(e) => {
                           e.stopPropagation();
                           openNonConformite(cam);
                         }}
                       >
-                        <AlertTriangle size={8} className="text-white" />
-                        <span className="text-white text-[9px] font-bold">
-                          {camAlertCount}
+                        <AlertTriangle size={11} className="text-white drop-shadow-sm" />
+                        <span className="text-white text-[10px] font-bold drop-shadow-sm ml-0.5">
+                          {camAlertCount} Anomalie{camAlertCount > 1 ? 's' : ''}
                         </span>
-                      </div>
+                      </button>
                     )}
                   </div>
                   <div className="p-2 bg-white">
@@ -809,10 +856,10 @@ export function CameraMonitoring() {
               {selectedCamera.status === "active" && hasViolation && (
                 <button
                   onClick={() => openNonConformite(selectedCamera)}
-                  title="Examiner la non-conformité détectée sur cette caméra"
+                  title="Consulter les prédictions détectées sur cette caméra"
                   className="flex items-center gap-2 px-3 py-2.5 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl text-sm font-bold transition shadow-sm"
                 >
-                  <AlertTriangle size={15} /> Non-conformités
+                  <AlertTriangle size={15} /> Consulter les prédictions
                 </button>
               )}
             </div>
